@@ -2,51 +2,107 @@
 
 module Main where
 
-import qualified Data.ByteString.Char8 as B
-import           Data.ByteString.Char8 (ByteString)
+import           Control.Applicative ((<|>))
+import           Control.Monad
 import           Control.Monad.Trans (liftIO)
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.ByteString.Char8 (ByteString)
+import           System.Directory
+import           System.Exit
+import           System.FilePath
 import           Text.Printf
 
-import           Snap
+import           Snap hiding (path)
 import           Util
 
 ------------------------------------------------------------------------
 
 main :: IO ()
-main = httpServe' defaultConfig site
+main = do
+    cwd <- getCurrentDirectory
+    let root = cwd </> "repositories"
+    httpServe' defaultConfig (site root)
 
 ------------------------------------------------------------------------
 
-site :: Snap ()
-site = route
-    [ ("",                      ifTop $ writeBS "gitsnap")
-    , (":user/:repo/info/refs", ifTop refs)
-    ]
+site :: FilePath -> Snap ()
+site root = ifTop (writeBS "gitsnap")
+        <|> route [(":user/:repo", repository root)]
 
-refs :: Snap ()
-refs = do
-    --Just user <- getParam "user"
-    --Just repo <- getParam "repo"
-    Just service <- getService
-    (_, out, _) <- liftIO $ run "." "git" [B.unpack service, "--stateless-rpc", "--advertise-refs", "."]
+repository :: FilePath -> Snap ()
+repository root = do
+    user <- getParamStr "user"
+    repo <- getParamStr "repo"
+    let path = root </> user </> repo
 
-    contentType $ B.concat ["application/x-git-", service,"-advertisement"]
-    cacheDisabled
-    writeBS $ pktWrite $ B.concat ["# service=git-", service, "\n"]
-    writeBS pktFlush
+    repoExists <- liftIO $ doesDirectoryExist path
+    guard repoExists
+    routes path
+  where
+    with m = method m . routeTop
+    routes path =
+         with POST [ ("git-upload-pack", rpc "upload-pack" path)
+                   ]
+     <|> with GET  [ ("info/refs", infoRefs path)
+                   ]
+
+------------------------------------------------------------------------
+
+rpc :: ByteString -> FilePath -> Snap ()
+rpc service path = do
+    contentType' ["application/x-git-", service, "-result"]
+    body <- getRequestBody
+    out <- git' path [service, "--stateless-rpc", "."] body
     writeBS out
 
 ------------------------------------------------------------------------
 
-getService :: Snap (Maybe B.ByteString)
-getService = do
-    service <- getParam "service"
-    return (checked service)
+infoRefs :: FilePath -> Snap ()
+infoRefs path = do
+    service <- getService
+    refs <- git path [service, "--stateless-rpc", "--advertise-refs", "."]
+
+    contentType' ["application/x-git-", service, "-advertisement"]
+    cacheDisabled
+
+    writeBS $ pktWrite' ["# service=git-", service, "\n"]
+    writeBS pktFlush
+    writeBS refs
+
+------------------------------------------------------------------------
+
+git :: FilePath -> [ByteString] -> Snap ByteString
+git repo args = git' repo args ""
+
+git' :: FilePath -> [ByteString] -> L.ByteString -> Snap ByteString
+git' repo args input = do
+    liftIO $ putStrLn $ "(in " ++ repo ++ ")"
+    liftIO $ putStrLn $ "$ git " ++ unwords args'
+    result <- liftIO $ run' repo "git" args' input
+    case result of
+        (ExitSuccess, out, _)        -> return out
+        (ExitFailure code, out, err) -> do
+            let msg = formatError code out err
+            logError $ B.concat ["Git failed:\n(in ", B.pack repo, ")\n", msg]
+            error (B.unpack msg)
   where
-    checked Nothing        = Nothing
-    checked (Just service) = if "git-" `B.isPrefixOf` service
-                             then Just (B.drop 4 service)
-                             else Nothing
+    args' = map B.unpack args
+    formatError code out err = B.concat
+        [ "$ git ", B.unwords args, "\n"
+        , out, err
+        , "(exit code was ", B.pack (show code), ")" ]
+
+------------------------------------------------------------------------
+
+getService :: Snap ByteString
+getService = getParamMap f "service"
+  where
+    f x = if "git-" `B.isPrefixOf` x
+          then Just (B.drop 4 x)
+          else Nothing
+
+------------------------------------------------------------------------
 
 pktFlush :: ByteString
 pktFlush = "0000"
@@ -55,3 +111,6 @@ pktWrite :: ByteString -> ByteString
 pktWrite str = size `B.append` str
   where
     size = B.pack $ printf "%04x" (B.length str + 4)
+
+pktWrite' :: [ByteString] -> ByteString
+pktWrite' = pktWrite . B.concat
