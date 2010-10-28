@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Util
-    ( run
-    , run'
+    ( cmd
+    , cmd'
     ) where
 
 import           Control.Concurrent
@@ -18,23 +18,23 @@ import           Prelude hiding (catch)
 ------------------------------------------------------------------------
 
 -- | Runs a process and reads the output
-run :: FilePath                              -- ^ working directory
-    -> FilePath                              -- ^ command to run
+cmd :: FilePath                              -- ^ working directory
+    -> FilePath                              -- ^ executable to run
     -> [String]                              -- ^ any arguments
     -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
-run wd cmd args = run' wd cmd args ""
+cmd dir exe args = cmd' dir exe args ""
 
 -- | Runs a process and reads the output (allows for providing stdin)
-run' :: FilePath                              -- ^ working directory
-     -> FilePath                              -- ^ command to run
+cmd' :: FilePath                              -- ^ working directory
+     -> FilePath                              -- ^ executable to run
      -> [String]                              -- ^ any arguments
      -> L.ByteString                          -- ^ standard input
      -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
-run' wd cmd args input = do
+cmd' dir exe args input = do
 
     (Just inh, Just outh, Just errh, pid) <-
-        createProcess (proc cmd args)
-            { cwd = Just wd
+        createProcess (proc exe args)
+            { cwd = Just dir
             , std_in  = CreatePipe
             , std_out = CreatePipe
             , std_err = CreatePipe }

@@ -77,20 +77,25 @@ git repo args = git' repo args ""
 
 git' :: FilePath -> [ByteString] -> L.ByteString -> Snap ByteString
 git' repo args input = do
-    liftIO $ putStrLn $ "(in " ++ repo ++ ")"
-    liftIO $ putStrLn $ "$ git " ++ unwords args'
-    result <- liftIO $ run' repo "git" args' input
+    liftIO $ putStr $ "\n" ++ info
+    result <- liftIO $ cmd' repo "git" args' input
     case result of
-        (ExitSuccess, out, _)        -> return out
+        (ExitSuccess, out, _)        -> do
+            liftIO $ putStrLn $ "[sending " ++ show (B.length out) ++ " bytes]"
+            return out
         (ExitFailure code, out, err) -> do
             let msg = formatError code out err
-            logError $ B.concat ["Git failed:\n(in ", B.pack repo, ")\n", msg]
-            error (B.unpack msg)
+
+            liftIO $ B.putStr $ msg `B.snoc` '\n'
+            error $ B.unpack $ B.concat
+                [ "git failed:\n"
+                , B.pack info
+                , formatError code out err]
   where
     args' = map B.unpack args
+    info = "(in " ++ repo ++ ")\n$ git " ++ unwords args' ++ "\n"
     formatError code out err = B.concat
-        [ "$ git ", B.unwords args, "\n"
-        , out, err
+        [ out, err
         , "(exit code was ", B.pack (show code), ")" ]
 
 ------------------------------------------------------------------------
