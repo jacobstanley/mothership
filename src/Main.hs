@@ -8,6 +8,8 @@ import           Control.Monad.Trans (liftIO)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
+import           Snap.Http.Server
+import           Snap.Types
 import           System.Directory
 import           System.Exit
 import           System.FilePath
@@ -22,7 +24,7 @@ main :: IO ()
 main = do
     cwd <- getCurrentDirectory
     let root = cwd </> "repositories"
-    httpServe' defaultConfig (site root)
+    httpServe defaultConfig (site root)
 
 ------------------------------------------------------------------------
 
@@ -77,7 +79,7 @@ git repo args = git' repo args ""
 
 git' :: FilePath -> [ByteString] -> L.ByteString -> Snap ByteString
 git' repo args input = do
-    liftIO $ putStr $ "\n" ++ info
+    liftIO $ putStr $ "\n" : info
     result <- liftIO $ cmd' repo "git" args' input
     case result of
         (ExitSuccess, out, _)        -> do
