@@ -17,7 +17,7 @@ Executable gitsnap
   build-depends:       
       base        >= 4
     , bytestring  == 0.9.*
-    , directory   == 1.1.*
+    , directory   == 1.0.*
     , filepath    == 1.1.*
     , monads-fd   == 0.1.*
     , old-locale  == 1.0.*
