@@ -3,6 +3,7 @@
 module Util
     ( cmd
     , cmd'
+    , enumCmd
     ) where
 
 import           Control.Concurrent
@@ -10,6 +11,7 @@ import           Control.Monad
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
+import           Snap.Iteratee
 import           System.Exit
 import           System.IO
 import           System.Process
@@ -72,3 +74,12 @@ cmd' dir exe args input = do
     err <- readMVar errM
 
     return (ex, out, err)
+
+------------------------------------------------------------------------
+
+-- | Runs a process and reads the output
+enumCmd :: FilePath        -- ^ working directory
+        -> FilePath        -- ^ command to run
+        -> [String]        -- ^ any arguments
+        -> Enumeratee ByteString ByteString IO a
+enumCmd dir exe args = undefined

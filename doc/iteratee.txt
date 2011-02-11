@@ -1,0 +1,42 @@
+<jystic> is it possible with iteratees/transformRequestBody to take the request body, feed it to the stdin of another process, and read the stdout as the response? or am i better off with lazy bytestrings?
+<gcollins> jystic: that would be quite doable!
+<jystic> cool, just wanted to make sure i'm not about to attempt something impossible :)
+<gcollins> runInteractiveCommand is probably your best bet
+<gcollins> you'll probably want to do a forkIO/Chan trick in there
+<jystic> right now i'm doing this: http://github.com/jystic/gitsnap/blob/master/src/Util.hs:33
+<gcollins> it's tricky to avoid starvation there i think without going to forkIO -- we do a similar thing in Snap.Util.GZip
+<jystic> ahh that's the other thing
+<gcollins> so when you get a Chunk from the enumerator, you feed it to the process's stdin
+<gcollins> the forkIO'd thread reads the output and stuffs it into a Chan
+<gcollins> whenever you get a Chunk you read as much of the output as it's given you off the Chan and pass it to the wrapped iteratee, then take the continuation
+<gcollins> when the enumerator gives you EOF, you read the rest of the Chan and bob's your uncle
+<jystic> cool
+<gcollins> the process has to have "good" semantics though, when you send it EOF through its channel it needs to terminate the output stream
+<jystic> what would the type of "run" be?
+<gcollins> something like FilePath -> FilePath -> [String] -> Enumerator IO a
+<gcollins> you give it an Iteratee (to read the process output) and it gives you an iteratee that takes input from another enumerator
+<jystic> what is 'a' in Enumerator IO a?
+<gcollins> probably this should be an "enumeratee" actually but iteratee-0.3 doesn't have a type for that, or i've never used it properly
+<gcollins> Enumerator m a == Iteratee m a -> m (Iteratee m a)
+<gcollins> so it depends on the input
+<jystic> ah ok, so in the case of reading/writing to a process would it be Word8? or a chunk of ByteString?
+<gcollins> no, it's the value that the iteratee produces after it reads the string
+<gcollins> usually ()
+<jystic> ahh ok
+<gcollins> here i'm using our type alias for Enumerator, because we only ever deal with streams of bytestring chunks
+<jystic> right so you could specify something different if you used the iteratee library directly
+<jystic> but i don't really want that anyway
+<gcollins> IterateeG WrappedByteString Word8 m a
+<gcollins> quite a mouthful
+<jystic> yeah
+<gcollins> the presentation in the enumerator package is really a LOT nicer for this
+<gcollins> i think i'm starting to sway. i hope john lato doesn't get too mad at me
+<jystic> :)
+<gcollins> i don't want to waste the work he did porting it, but i think we have to make the best decision for the project
+<jystic> so he ported all the snap stuff to the new api?
+<gcollins> much of it, yes
+<gcollins> i don't think he completely finished the job
+<gcollins> http://github.com/JohnLato/snap-core/tree/iteratee-0.4
+<gcollins> http://github.com/JohnLato/snap-server/tree/iteratee-0.4
+<jystic> well, must be time for bed, thanks for the details on reading from a process, i'll have to give that a shot tomorrow
+<gcollins> night
