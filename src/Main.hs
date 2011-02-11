@@ -9,13 +9,13 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
 import           Snap.Http.Server
-import           Snap.Types
+import           Snap.Types hiding (path)
 import           System.Directory
 import           System.Exit
 import           System.FilePath
 import           Text.Printf
 
-import           Snap hiding (path)
+import           Snap
 import           Util
 
 ------------------------------------------------------------------------
@@ -79,7 +79,7 @@ git repo args = git' repo args ""
 
 git' :: FilePath -> [ByteString] -> L.ByteString -> Snap ByteString
 git' repo args input = do
-    liftIO $ putStr $ "\n" : info
+    liftIO $ putStr $ "\n" ++ info
     result <- liftIO $ cmd' repo "git" args' input
     case result of
         (ExitSuccess, out, _)        -> do

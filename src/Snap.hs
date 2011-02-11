@@ -20,7 +20,6 @@ import           Data.ByteString.Char8 (ByteString)
 import           Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           Data.Time.Format (formatTime)
 import           Prelude hiding (catch)
-import           Snap.Http.Server
 import           Snap.Types hiding (formatHttpTime)
 import           System.Locale (defaultTimeLocale)
 
