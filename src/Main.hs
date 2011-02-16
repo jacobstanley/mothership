@@ -4,19 +4,20 @@ module Main where
 
 import           Control.Applicative ((<|>))
 import           Control.Monad
-import           Control.Monad.Trans (liftIO)
+import           Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
 import           Snap.Http.Server
+import           Snap.Iteratee hiding (map)
+import qualified Snap.Iteratee as I
 import           Snap.Types hiding (path)
 import           System.Directory
 import           System.Exit
 import           System.FilePath
 import           Text.Printf
 
-import           Snap
-import           Util
+import           GitSnap.Snap
+import           GitSnap.Util
 
 ------------------------------------------------------------------------
 
@@ -54,9 +55,17 @@ repository root = do
 rpc :: ByteString -> FilePath -> Snap ()
 rpc service path = do
     contentType' ["application/x-git-", service, "-result"]
-    body <- getRequestBody
-    out <- git' path [service, "--stateless-rpc", "."] body
+    out <- runRequestBody' $ git' path [service, "--stateless-rpc", "."]
     writeBS out
+
+runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
+runRequestBody' iter = do
+    req <- getRequest
+    runRequestBody $ decompress req $ iter
+  where
+    decompress req x = case getHeader "content-encoding" req of
+        Just "gzip" -> joinI $ ungzip $$ x
+        _ -> x
 
 ------------------------------------------------------------------------
 
@@ -74,13 +83,13 @@ infoRefs path = do
 
 ------------------------------------------------------------------------
 
-git :: FilePath -> [ByteString] -> Snap ByteString
-git repo args = git' repo args ""
+git :: MonadIO m => FilePath -> [ByteString] -> m ByteString
+git repo args = I.run_ $ git' repo args
 
-git' :: FilePath -> [ByteString] -> L.ByteString -> Snap ByteString
-git' repo args input = do
+git' :: MonadIO m => FilePath -> [ByteString] -> Iteratee ByteString m ByteString
+git' repo args = do
     liftIO $ putStr $ "\n" ++ info
-    result <- liftIO $ cmd' repo "git" args' input
+    result <- cmdI repo "git" args'
     case result of
         (ExitSuccess, out, _)        -> do
             liftIO $ putStrLn $ "[sending " ++ show (B.length out) ++ " bytes]"

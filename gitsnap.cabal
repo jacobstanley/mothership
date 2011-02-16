@@ -28,6 +28,7 @@ Executable gitsnap
     , time        == 1.1.*
     , MonadCatchIO-transformers == 0.2.*
     , xhtml-combinators         == 0.2.*
+    , zlib-bindings             == 0.0.*
   
   if impl(ghc >= 6.12.0)
     ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2

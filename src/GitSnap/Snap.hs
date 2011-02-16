@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Snap
+module GitSnap.Snap
     ( contentType
     , contentType'
     , cacheDisabled
