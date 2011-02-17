@@ -8,6 +8,7 @@ module GitSnap.Util
     , ungzip
     ) where
 
+import           Blaze.ByteString.Builder
 import           Codec.Zlib
 import           Control.Concurrent
 import           Control.Monad
@@ -15,7 +16,7 @@ import           Control.Monad.Trans
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
-import           Snap.Iteratee
+import           Snap.Iteratee hiding (map)
 import           System.Exit
 import           System.IO
 import           System.Process
@@ -63,8 +64,8 @@ cmdI :: MonadIO m
      => FilePath  -- ^ working directory
      -> FilePath  -- ^ executable to run
      -> [String]  -- ^ any arguments
-     -> Iteratee ByteString m (ExitCode, ByteString, ByteString)
-cmdI dir exe args = do
+     -> Enumerator Builder m a
+cmdI dir exe args origStep = do
 
     (Just inH, Just outH, Just errH, pid) <-
         liftIO $ createProcess (proc exe args)
@@ -73,26 +74,45 @@ cmdI dir exe args = do
             , std_out = CreatePipe
             , std_err = CreatePipe }
 
-    outM <- liftIO $ forkGetContents outH
     errM <- liftIO $ forkGetContents errH
 
-    let loop = do
-        mbs <- head
-        case mbs of
-            Nothing -> liftIO $ do
-                hClose inH
-                out <- takeMVar outM
-                err <- takeMVar errM
-                ex  <- waitForProcess pid
-                return (ex, out, err)
-            Just bs -> do
-                liftIO $ B.putStr bs
-                liftIO $ B.hPut inH bs
-                loop
+    let outputLoop :: MonadIO m => Enumerator Builder m a
+        outputLoop (Continue k) = do
+            bs <- liftIO $ B.hGet outH 4096
+            if B.null bs
+                then do
+                    liftIO $ putStrLn "** stdout exausted **"
+                    err <- liftIO $ takeMVar errM
+                    ex  <- liftIO $ waitForProcess pid
+                    case ex of
+                        ExitSuccess -> continue k
+                        ExitFailure _ -> error $ B.unpack err
+                else do
+                    liftIO $ B.putStrLn $ "out: " `B.append` bs
+                    k (Chunks [fromBS bs]) >>== outputLoop
+        outputLoop step = returnI step
 
-    loop
+        inputLoop :: MonadIO m => Enumerator Builder m a
+        inputLoop step = do
+            mbs <- head
+            case mbs of
+                Nothing -> do
+                    liftIO $ putStrLn "** stdin exausted **"
+                    liftIO $ hClose inH
+                    outputLoop step
+                Just bs -> do
+                    liftIO $ B.putStrLn $ "in: " `B.append` toBS bs
+                    liftIO $ B.hPut inH $ toBS bs
+                    inputLoop step
+    inputLoop origStep
 
 ------------------------------------------------------------------------
+
+fromBS :: B.ByteString -> Builder
+fromBS = fromByteString
+
+toBS :: Builder -> B.ByteString
+toBS = toByteString
 
 forkGetContents :: Handle -> IO (MVar ByteString)
 forkGetContents h = do
@@ -105,21 +125,21 @@ forkGetContents h = do
 ------------------------------------------------------------------------
 
 -- Stolen from http-enumerator (Network.HTTP.Enumerator.Zlib)
-ungzip :: MonadIO m => Enumeratee B.ByteString B.ByteString m b
+ungzip :: MonadIO m => Enumeratee Builder Builder m b
 ungzip inner = do
     fzstr <- liftIO $ initInflate $ WindowBits 31
     ungzip' fzstr inner
 
-ungzip' :: MonadIO m => Inflate -> Enumeratee B.ByteString B.ByteString m b
+ungzip' :: MonadIO m => Inflate -> Enumeratee Builder Builder m b
 ungzip' fzstr (Continue k) = do
     x <- head
     case x of
         Nothing -> do
             chunk <- liftIO $ finishInflate fzstr
-            lift $ runIteratee $ k $ Chunks [chunk]
-        Just bs -> do
-            chunks <- liftIO $ withInflateInput fzstr bs $ go id
-            step <- lift $ runIteratee $ k $ Chunks chunks
+            lift $ runIteratee $ k $ Chunks [fromBS chunk]
+        Just b -> do
+            chunks <- liftIO $ withInflateInput fzstr (toBS b) $ go id
+            step <- lift $ runIteratee $ k $ Chunks $ map fromBS chunks
             ungzip' fzstr step
   where
     go front pop = do
@@ -127,4 +147,7 @@ ungzip' fzstr (Continue k) = do
         case x of
             Nothing -> return $ front []
             Just y -> go (front . (:) y) pop
+
 ungzip' _ step = return step
+
+

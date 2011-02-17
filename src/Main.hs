@@ -1,18 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Main where
 
+import           Blaze.ByteString.Builder
 import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
+import           Data.Enumerator (joinE)
 import           Snap.Http.Server
 import           Snap.Iteratee hiding (map)
 import qualified Snap.Iteratee as I
 import           Snap.Types hiding (path)
+import           Snap.Util.FileServe
 import           System.Directory
-import           System.Exit
 import           System.FilePath
 import           Text.Printf
 
@@ -41,6 +44,9 @@ repository root = do
 
     repoExists <- liftIO $ doesDirectoryExist path
     guard repoExists
+
+    printURI
+
     routes path
   where
     with m = method m . routeTop
@@ -48,66 +54,57 @@ repository root = do
          with POST [ ("git-upload-pack", rpc "upload-pack" path)
                    ]
      <|> with GET  [ ("info/refs", infoRefs path)
+                   , textFile path "HEAD"
                    ]
+
+textFile :: FilePath -> ByteString -> (ByteString, Snap ())
+textFile p f = (f, do
+    liftIO $ putStrLn "Serving file"
+    serveFileAs "text/plain" $ p </> B.unpack f)
 
 ------------------------------------------------------------------------
 
 rpc :: ByteString -> FilePath -> Snap ()
 rpc service path = do
     contentType' ["application/x-git-", service, "-result"]
-    out <- runRequestBody' $ git' path [service, "--stateless-rpc", "."]
-    writeBS out
-
-runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
-runRequestBody' iter = do
-    req <- getRequest
-    runRequestBody $ decompress req $ iter
-  where
-    decompress req x = case getHeader "content-encoding" req of
-        Just "gzip" -> joinI $ ungzip $$ x
-        _ -> x
+    transformRequestBody' $ git' path [service, "--stateless-rpc", "."]
 
 ------------------------------------------------------------------------
 
 infoRefs :: FilePath -> Snap ()
 infoRefs path = do
     service <- getService
-    refs <- git path [service, "--stateless-rpc", "--advertise-refs", "."]
 
-    contentType' ["application/x-git-", service, "-advertisement"]
     cacheDisabled
+    contentType' ["application/x-git-", service, "-advertisement"]
 
-    writeBS $ pktWrite' ["# service=git-", service, "\n"]
-    writeBS pktFlush
-    writeBS refs
+    transformRequestBody $
+        git path [service, "--stateless-rpc", "--advertise-refs", "."]
+        <==< enumBS' (pktWrite' ["# service=git-", service, "\n"])
+        <==< enumBS' pktFlush
+
+
+enumBS' :: forall a. ByteString -> Enumerator Builder IO a
+enumBS' bs = enumBuilder $ fromByteString bs
 
 ------------------------------------------------------------------------
 
-git :: MonadIO m => FilePath -> [ByteString] -> m ByteString
-git repo args = I.run_ $ git' repo args
+git :: MonadIO m
+    => FilePath
+    -> [ByteString]
+    -> Enumerator Builder m a
+git repo args = git' repo args
 
-git' :: MonadIO m => FilePath -> [ByteString] -> Iteratee ByteString m ByteString
-git' repo args = do
-    liftIO $ putStr $ "\n" ++ info
-    result <- cmdI repo "git" args'
-    case result of
-        (ExitSuccess, out, _)        -> do
-            liftIO $ putStrLn $ "[sending " ++ show (B.length out) ++ " bytes]"
-            return out
-        (ExitFailure code, out, err) -> do
-            let msg = formatError code out err
-
-            liftIO $ B.putStr $ msg `B.snoc` '\n'
-            error $ B.unpack $ B.concat
-                [ "git failed:\n"
-                , B.pack info
-                , formatError code out err]
+git' :: MonadIO m
+     => FilePath
+     -> [ByteString]
+     -> Enumerator Builder m a
+git' repo args step = do
+    liftIO $ putStr info
+    cmdI repo "git" args' step
   where
     args' = map B.unpack args
     info = "(in " ++ repo ++ ")\n$ git " ++ unwords args' ++ "\n"
-    formatError code out err = B.concat
-        [ out, err
-        , "(exit code was ", B.pack (show code), ")" ]
 
 ------------------------------------------------------------------------
 
@@ -130,3 +127,22 @@ pktWrite str = size `B.append` str
 
 pktWrite' :: [ByteString] -> ByteString
 pktWrite' = pktWrite . B.concat
+
+------------------------------------------------------------------------
+
+transformRequestBody' :: (forall a . Enumerator Builder IO a) -> Snap ()
+transformRequestBody' enum = do
+    req <- getRequest
+    transformRequestBody $ joinE enum $ decompress req
+  where
+    decompress :: Request -> (forall a. Enumeratee Builder Builder IO a)
+    decompress req =
+        case getHeader "content-encoding" req of
+            Just "gzip" -> ungzip
+            _ -> I.map id
+
+printURI :: Snap ()
+printURI = do
+    req <- getRequest
+    liftIO $ putStrLn $
+        "\n" ++ show (rqMethod req) ++ " " ++ B.unpack (rqURI req)
