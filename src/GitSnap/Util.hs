@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module GitSnap.Util
     ( cmd
     , cmd'
     , cmdI
+
+    , Process (..)
+    , process
 
     , ungzip
     ) where
@@ -57,6 +61,59 @@ cmd' dir exe args input = do
     ex  <- waitForProcess pid
 
     return (ex, out, err)
+
+------------------------------------------------------------------------
+
+data Process = Process
+    { stdin  :: MonadIO m => Iteratee ByteString m ()
+    , stdout :: MonadIO m => Enumerator Builder m a
+    }
+
+process :: MonadIO m
+        => FilePath  -- ^ working directory
+        -> FilePath  -- ^ executable to run
+        -> [String]  -- ^ any arguments
+        -> m Process
+process dir exe args = do
+
+    (Just inH, Just outH, Just errH, pid) <-
+        liftIO $ createProcess (proc exe args)
+            { cwd = Just dir
+            , std_in  = CreatePipe
+            , std_out = CreatePipe
+            , std_err = CreatePipe }
+
+    errM <- liftIO $ forkGetContents errH
+
+    let outputLoop :: MonadIO m => Enumerator Builder m a
+        outputLoop (Continue k) = do
+            bs <- liftIO $ B.hGet outH 4096
+            if B.null bs
+                then do
+                    liftIO $ putStrLn "** stdout exausted **"
+                    err <- liftIO $ takeMVar errM
+                    ex  <- liftIO $ waitForProcess pid
+                    case ex of
+                        ExitSuccess -> continue k
+                        ExitFailure _ -> error $ B.unpack err
+                else do
+                    liftIO $ B.putStrLn $ "out: " `B.append` bs
+                    k (Chunks [fromBS bs]) >>== outputLoop
+        outputLoop step = returnI step
+
+        inputLoop :: MonadIO m => Iteratee ByteString m ()
+        inputLoop = do
+            mbs <- head
+            case mbs of
+                Nothing -> do
+                    liftIO $ putStrLn "** stdin exausted **"
+                    liftIO $ hClose inH
+                Just bs -> do
+                    liftIO $ B.putStrLn $ "in: " `B.append` bs
+                    liftIO $ B.hPut inH bs
+                    inputLoop
+
+    return $ Process inputLoop outputLoop
 
 ------------------------------------------------------------------------
 
@@ -125,21 +182,21 @@ forkGetContents h = do
 ------------------------------------------------------------------------
 
 -- Stolen from http-enumerator (Network.HTTP.Enumerator.Zlib)
-ungzip :: MonadIO m => Enumeratee Builder Builder m b
+ungzip :: MonadIO m => Enumeratee B.ByteString B.ByteString m b
 ungzip inner = do
     fzstr <- liftIO $ initInflate $ WindowBits 31
     ungzip' fzstr inner
 
-ungzip' :: MonadIO m => Inflate -> Enumeratee Builder Builder m b
+ungzip' :: MonadIO m => Inflate -> Enumeratee B.ByteString B.ByteString m b
 ungzip' fzstr (Continue k) = do
     x <- head
     case x of
         Nothing -> do
             chunk <- liftIO $ finishInflate fzstr
-            lift $ runIteratee $ k $ Chunks [fromBS chunk]
-        Just b -> do
-            chunks <- liftIO $ withInflateInput fzstr (toBS b) $ go id
-            step <- lift $ runIteratee $ k $ Chunks $ map fromBS chunks
+            lift $ runIteratee $ k $ Chunks [chunk]
+        Just bs -> do
+            chunks <- liftIO $ withInflateInput fzstr bs $ go id
+            step <- lift $ runIteratee $ k $ Chunks chunks
             ungzip' fzstr step
   where
     go front pop = do
@@ -147,7 +204,4 @@ ungzip' fzstr (Continue k) = do
         case x of
             Nothing -> return $ front []
             Just y -> go (front . (:) y) pop
-
 ungzip' _ step = return step
-
-

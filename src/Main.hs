@@ -3,16 +3,13 @@
 
 module Main where
 
-import           Blaze.ByteString.Builder
 import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Enumerator (joinE)
 import           Snap.Http.Server
 import           Snap.Iteratee hiding (map)
-import qualified Snap.Iteratee as I
 import           Snap.Types hiding (path)
 import           Snap.Util.FileServe
 import           System.Directory
@@ -67,7 +64,11 @@ textFile p f = (f, do
 rpc :: ByteString -> FilePath -> Snap ()
 rpc service path = do
     contentType' ["application/x-git-", service, "-result"]
-    transformRequestBody' $ git' path [service, "--stateless-rpc", "."]
+
+    p <- git path [service, "--stateless-rpc", "."]
+
+    runRequestBody' (stdin p)
+    addToOutput (stdout p)
 
 ------------------------------------------------------------------------
 
@@ -78,30 +79,23 @@ infoRefs path = do
     cacheDisabled
     contentType' ["application/x-git-", service, "-advertisement"]
 
-    transformRequestBody $
-        git path [service, "--stateless-rpc", "--advertise-refs", "."]
-        <==< enumBS' (pktWrite' ["# service=git-", service, "\n"])
-        <==< enumBS' pktFlush
+    writeBS $ pktWrite' ["# service=git-", service, "\n"]
+    writeBS pktFlush
 
+    p <- git path [service, "--stateless-rpc", "--advertise-refs", "."]
 
-enumBS' :: forall a. ByteString -> Enumerator Builder IO a
-enumBS' bs = enumBuilder $ fromByteString bs
+    runRequestBody' (stdin p)
+    addToOutput (stdout p)
 
 ------------------------------------------------------------------------
 
 git :: MonadIO m
     => FilePath
     -> [ByteString]
-    -> Enumerator Builder m a
-git repo args = git' repo args
-
-git' :: MonadIO m
-     => FilePath
-     -> [ByteString]
-     -> Enumerator Builder m a
-git' repo args step = do
+    -> m Process
+git repo args = do
     liftIO $ putStr info
-    cmdI repo "git" args' step
+    process repo "git" args'
   where
     args' = map B.unpack args
     info = "(in " ++ repo ++ ")\n$ git " ++ unwords args' ++ "\n"
@@ -130,16 +124,14 @@ pktWrite' = pktWrite . B.concat
 
 ------------------------------------------------------------------------
 
-transformRequestBody' :: (forall a . Enumerator Builder IO a) -> Snap ()
-transformRequestBody' enum = do
+runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
+runRequestBody' iter = do
     req <- getRequest
-    transformRequestBody $ joinE enum $ decompress req
+    runRequestBody $ decompress req $ iter
   where
-    decompress :: Request -> (forall a. Enumeratee Builder Builder IO a)
-    decompress req =
-        case getHeader "content-encoding" req of
-            Just "gzip" -> ungzip
-            _ -> I.map id
+    decompress req x = case getHeader "content-encoding" req of
+        Just "gzip" -> joinI $ ungzip $$ x
+        _ -> x
 
 printURI :: Snap ()
 printURI = do
