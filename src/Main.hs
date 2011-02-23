@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Main where
 
-import           Blaze.ByteString.Builder
 import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
 import           Snap.Http.Server
-import           Snap.Iteratee hiding (map)
 import           Snap.Types hiding (path)
 import           Snap.Util.FileServe
 import           System.Directory
@@ -50,6 +47,7 @@ repository root = do
     with m = method m . routeTop
     routes path =
          with POST [ ("git-upload-pack", rpc "upload-pack" path)
+                   , ("git-receive-pack", rpc "receive-pack" path)
                    ]
      <|> with GET  [ ("info/refs", infoRefs path)
                    , textFile path "HEAD"
@@ -87,7 +85,7 @@ git :: MonadSnap m => FilePath -> [ByteString] -> m ()
 git repo args = do
     g <- gitProcess repo args
     runRequestBody' (stdin g)
-    addToOutput' (stdout g)
+    addToOutputBS (stdout g)
 
 gitProcess :: MonadIO m => FilePath -> [ByteString] -> m Process
 gitProcess repo args = do
@@ -120,18 +118,6 @@ pktWrite' :: [ByteString] -> ByteString
 pktWrite' = pktWrite . B.concat
 
 ------------------------------------------------------------------------
-
-runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
-runRequestBody' iter = do
-    req <- getRequest
-    runRequestBody $ decompress req $ iter
-  where
-    decompress req x = case getHeader "content-encoding" req of
-        Just "gzip" -> joinI $ ungzip $$ x
-        _ -> x
-
-addToOutput' :: MonadSnap m => (forall a. Enumerator ByteString IO a) -> m ()
-addToOutput' e = addToOutput $ mapEnum toByteString fromByteString e
 
 printURI :: Snap ()
 printURI = do

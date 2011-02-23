@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module GitSnap.Snap
     ( contentType
@@ -12,14 +13,21 @@ module GitSnap.Snap
     , getParamBS
     , getParamStr
     , getParamMap
+
+    , runRequestBody'
+    , addToOutputBS
     ) where
 
-import           Control.Monad.Trans (liftIO)
+import           Blaze.ByteString.Builder
+import           Codec.Zlib
+import           Control.Monad.Trans (MonadIO, lift, liftIO)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
 import           Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           Data.Time.Format (formatTime)
 import           Prelude hiding (catch)
+import           Snap.Iteratee hiding (map)
+import qualified Snap.Iteratee as I
 import           Snap.Types hiding (formatHttpTime)
 import           System.Locale (defaultTimeLocale)
 
@@ -83,3 +91,44 @@ getParamMap f name = getParam name >>= \mstr -> case mstr of
         Just val -> return val
   where
     throwEx = error . B.unpack . B.concat
+
+------------------------------------------------------------------------
+
+runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
+runRequestBody' iter = do
+    req <- getRequest
+    runRequestBody $ decompress req $ iter
+  where
+    decompress req x = case getHeader "content-encoding" req of
+        Just "gzip" -> joinI $ ungzip $$ x
+        _ -> x
+
+addToOutputBS :: MonadSnap m => (forall a. Enumerator ByteString IO a) -> m ()
+addToOutputBS e = addToOutput $ mapEnum toByteString fromByteString e
+
+------------------------------------------------------------------------
+
+-- Stolen from http-enumerator (Network.HTTP.Enumerator.Zlib)
+ungzip :: MonadIO m => Enumeratee B.ByteString B.ByteString m b
+ungzip inner = do
+    fzstr <- liftIO $ initInflate $ WindowBits 31
+    ungzip' fzstr inner
+
+ungzip' :: MonadIO m => Inflate -> Enumeratee B.ByteString B.ByteString m b
+ungzip' fzstr (Continue k) = do
+    x <- I.head
+    case x of
+        Nothing -> do
+            chunk <- liftIO $ finishInflate fzstr
+            lift $ runIteratee $ k $ Chunks [chunk]
+        Just bs -> do
+            chunks <- liftIO $ withInflateInput fzstr bs $ go id
+            step <- lift $ runIteratee $ k $ Chunks chunks
+            ungzip' fzstr step
+  where
+    go front pop = do
+        x <- pop
+        case x of
+            Nothing -> return $ front []
+            Just y -> go (front . (:) y) pop
+ungzip' _ step = return step
