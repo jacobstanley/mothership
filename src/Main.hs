@@ -40,8 +40,6 @@ repository root = do
     repoExists <- liftIO $ doesDirectoryExist path
     guard repoExists
 
-    printURI
-
     routes path
   where
     with m = method m . routeTop
@@ -91,12 +89,7 @@ git repo args = do
     addToOutputBS (stdout g)
 
 gitProcess :: MonadIO m => FilePath -> [ByteString] -> m Process
-gitProcess repo args = do
-    liftIO $ putStr info
-    process repo "git" args'
-  where
-    args' = map B.unpack args
-    info = "(in " ++ repo ++ ")\n$ git " ++ unwords args' ++ "\n"
+gitProcess repo = process repo "git" . map B.unpack
 
 ------------------------------------------------------------------------
 
