@@ -54,9 +54,12 @@ repository root = do
                    ]
 
 textFile :: FilePath -> ByteString -> (ByteString, Snap ())
-textFile p f = (f, do
-    liftIO $ putStrLn "Serving file"
-    serveFileAs "text/plain" $ p </> B.unpack f)
+textFile p f = (f, serve)
+  where
+    path = p </> B.unpack f
+    serve = do
+        liftIO $ putStrLn $ "Serving " ++ path
+        serveFileAs "text/plain" path
 
 ------------------------------------------------------------------------
 
