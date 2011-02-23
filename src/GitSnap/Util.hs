@@ -2,12 +2,8 @@
 {-# LANGUAGE RankNTypes #-}
 
 module GitSnap.Util
-    ( cmd
-    , cmd'
-
-    , Process (..)
+    ( Process (..)
     , process
-
     , ungzip
     ) where
 
@@ -16,49 +12,12 @@ import           Control.Concurrent
 import           Control.Monad
 import           Control.Monad.Trans
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ByteString.Char8 (ByteString)
 import           Snap.Iteratee hiding (map)
 import           System.Exit
 import           System.IO
 import           System.Process
 import           Prelude hiding (catch, head)
-
-------------------------------------------------------------------------
-
--- | Runs a process and reads the output
-cmd :: FilePath                              -- ^ working directory
-    -> FilePath                              -- ^ executable to run
-    -> [String]                              -- ^ any arguments
-    -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
-cmd dir exe args = cmd' dir exe args ""
-
--- | Runs a process and reads the output (allows for providing stdin)
-cmd' :: FilePath                              -- ^ working directory
-     -> FilePath                              -- ^ executable to run
-     -> [String]                              -- ^ any arguments
-     -> L.ByteString                          -- ^ standard input
-     -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
-cmd' dir exe args input = do
-
-    (Just inH, Just outH, Just errH, pid) <-
-        createProcess (proc exe args)
-            { cwd = Just dir
-            , std_in  = CreatePipe
-            , std_out = CreatePipe
-            , std_err = CreatePipe }
-
-    outM <- forkGetContents outH
-    errM <- forkGetContents errH
-
-    unless (L.null input) $ do L.hPut inH input; hFlush inH
-    hClose inH
-
-    out <- takeMVar outM
-    err <- takeMVar errM
-    ex  <- waitForProcess pid
-
-    return (ex, out, err)
 
 ------------------------------------------------------------------------
 
