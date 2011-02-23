@@ -4,7 +4,6 @@
 module GitSnap.Util
     ( cmd
     , cmd'
-    , cmdI
 
     , Process (..)
     , process
@@ -12,7 +11,6 @@ module GitSnap.Util
     , ungzip
     ) where
 
-import           Blaze.ByteString.Builder
 import           Codec.Zlib
 import           Control.Concurrent
 import           Control.Monad
@@ -64,9 +62,12 @@ cmd' dir exe args input = do
 
 ------------------------------------------------------------------------
 
+bufferSize :: Int
+bufferSize = 4 * 1024
+
 data Process = Process
     { stdin  :: MonadIO m => Iteratee ByteString m ()
-    , stdout :: MonadIO m => Enumerator Builder m a
+    , stdout :: MonadIO m => Enumerator ByteString m a
     }
 
 process :: MonadIO m
@@ -85,91 +86,33 @@ process dir exe args = do
 
     errM <- liftIO $ forkGetContents errH
 
-    let outputLoop :: MonadIO m => Enumerator Builder m a
-        outputLoop (Continue k) = do
-            bs <- liftIO $ B.hGet outH 4096
+    let output :: MonadIO m => Enumerator ByteString m a
+        output (Continue k) = do
+            bs <- liftIO $ B.hGet outH bufferSize
             if B.null bs
                 then do
-                    liftIO $ putStrLn "** stdout exausted **"
                     err <- liftIO $ takeMVar errM
                     ex  <- liftIO $ waitForProcess pid
                     case ex of
                         ExitSuccess -> continue k
                         ExitFailure _ -> error $ B.unpack err
                 else do
-                    liftIO $ B.putStrLn $ "out: " `B.append` bs
-                    k (Chunks [fromBS bs]) >>== outputLoop
-        outputLoop step = returnI step
+                    k (Chunks [bs]) >>== output
+        output step = returnI step
 
-        inputLoop :: MonadIO m => Iteratee ByteString m ()
-        inputLoop = do
+        input :: MonadIO m => Iteratee ByteString m ()
+        input = do
             mbs <- head
             case mbs of
                 Nothing -> do
-                    liftIO $ putStrLn "** stdin exausted **"
                     liftIO $ hClose inH
                 Just bs -> do
-                    liftIO $ B.putStrLn $ "in: " `B.append` bs
                     liftIO $ B.hPut inH bs
-                    inputLoop
+                    input
 
-    return $ Process inputLoop outputLoop
-
-------------------------------------------------------------------------
-
-cmdI :: MonadIO m
-     => FilePath  -- ^ working directory
-     -> FilePath  -- ^ executable to run
-     -> [String]  -- ^ any arguments
-     -> Enumerator Builder m a
-cmdI dir exe args origStep = do
-
-    (Just inH, Just outH, Just errH, pid) <-
-        liftIO $ createProcess (proc exe args)
-            { cwd = Just dir
-            , std_in  = CreatePipe
-            , std_out = CreatePipe
-            , std_err = CreatePipe }
-
-    errM <- liftIO $ forkGetContents errH
-
-    let outputLoop :: MonadIO m => Enumerator Builder m a
-        outputLoop (Continue k) = do
-            bs <- liftIO $ B.hGet outH 4096
-            if B.null bs
-                then do
-                    liftIO $ putStrLn "** stdout exausted **"
-                    err <- liftIO $ takeMVar errM
-                    ex  <- liftIO $ waitForProcess pid
-                    case ex of
-                        ExitSuccess -> continue k
-                        ExitFailure _ -> error $ B.unpack err
-                else do
-                    liftIO $ B.putStrLn $ "out: " `B.append` bs
-                    k (Chunks [fromBS bs]) >>== outputLoop
-        outputLoop step = returnI step
-
-        inputLoop :: MonadIO m => Enumerator Builder m a
-        inputLoop step = do
-            mbs <- head
-            case mbs of
-                Nothing -> do
-                    liftIO $ putStrLn "** stdin exausted **"
-                    liftIO $ hClose inH
-                    outputLoop step
-                Just bs -> do
-                    liftIO $ B.putStrLn $ "in: " `B.append` toBS bs
-                    liftIO $ B.hPut inH $ toBS bs
-                    inputLoop step
-    inputLoop origStep
+    return $ Process input output
 
 ------------------------------------------------------------------------
-
-fromBS :: B.ByteString -> Builder
-fromBS = fromByteString
-
-toBS :: Builder -> B.ByteString
-toBS = toByteString
 
 forkGetContents :: Handle -> IO (MVar ByteString)
 forkGetContents h = do

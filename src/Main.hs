@@ -3,6 +3,7 @@
 
 module Main where
 
+import           Blaze.ByteString.Builder
 import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans (MonadIO, liftIO)
@@ -64,11 +65,7 @@ textFile p f = (f, do
 rpc :: ByteString -> FilePath -> Snap ()
 rpc service path = do
     contentType' ["application/x-git-", service, "-result"]
-
-    p <- git path [service, "--stateless-rpc", "."]
-
-    runRequestBody' (stdin p)
-    addToOutput (stdout p)
+    git path [service, "--stateless-rpc", "."]
 
 ------------------------------------------------------------------------
 
@@ -82,18 +79,18 @@ infoRefs path = do
     writeBS $ pktWrite' ["# service=git-", service, "\n"]
     writeBS pktFlush
 
-    p <- git path [service, "--stateless-rpc", "--advertise-refs", "."]
-
-    runRequestBody' (stdin p)
-    addToOutput (stdout p)
+    git path [service, "--stateless-rpc", "--advertise-refs", "."]
 
 ------------------------------------------------------------------------
 
-git :: MonadIO m
-    => FilePath
-    -> [ByteString]
-    -> m Process
+git :: MonadSnap m => FilePath -> [ByteString] -> m ()
 git repo args = do
+    g <- gitProcess repo args
+    runRequestBody' (stdin g)
+    addToOutput' (stdout g)
+
+gitProcess :: MonadIO m => FilePath -> [ByteString] -> m Process
+gitProcess repo args = do
     liftIO $ putStr info
     process repo "git" args'
   where
@@ -132,6 +129,9 @@ runRequestBody' iter = do
     decompress req x = case getHeader "content-encoding" req of
         Just "gzip" -> joinI $ ungzip $$ x
         _ -> x
+
+addToOutput' :: MonadSnap m => (forall a. Enumerator ByteString IO a) -> m ()
+addToOutput' e = addToOutput $ mapEnum toByteString fromByteString e
 
 printURI :: Snap ()
 printURI = do
