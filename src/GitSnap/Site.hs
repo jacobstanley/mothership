@@ -2,6 +2,8 @@
 
 module GitSnap.Site
     ( site
+    , siteTH
+    , getRepoDir
     ) where
 
 import           Control.Applicative ((<|>))
@@ -21,17 +23,28 @@ import           GitSnap.Util
 
 ------------------------------------------------------------------------
 
-site :: Application ()
-site = ifTop (writeBS "gitsnap2")
-   <|> route [(":user/:repo", repository)]
+siteTH :: Application ()
+siteTH = do
+    repoDir <- getRepoDir
+    site repoDir
 
-repository :: Application ()
-repository = do
+getRepoDir :: MonadIO m => m FilePath
+getRepoDir = do
+    cwd <- liftIO $ getCurrentDirectory
+    return $ cwd </> "repositories"
+
+------------------------------------------------------------------------
+
+site :: FilePath -> Application ()
+site repoDir = ifTop (writeBS "gitsnap")
+   <|> route [(":user/:repo", repository repoDir)]
+
+repository :: FilePath -> Application ()
+repository repoDir = do
     user <- getParamStr "user"
     repo <- getParamStr "repo"
 
-    cwd <- liftIO $ getCurrentDirectory
-    let path = cwd </> "repositories" </> user </> repo
+    let path = repoDir </> user </> repo
 
     repoExists <- liftIO $ doesDirectoryExist path
     guard repoExists
