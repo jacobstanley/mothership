@@ -33,24 +33,24 @@ import           System.Locale (defaultTimeLocale)
 
 ------------------------------------------------------------------------
 
-contentType :: B.ByteString -> Snap ()
+contentType :: MonadSnap m => B.ByteString -> m ()
 contentType ct = modifyResponse (setContentType ct)
 
-contentType' :: [B.ByteString] -> Snap ()
+contentType' :: MonadSnap m => [B.ByteString] -> m ()
 contentType' = contentType . B.concat
 
-cacheDisabled :: Snap ()
+cacheDisabled :: MonadSnap m => m ()
 cacheDisabled = modifyResponse $
     setHeader "Expires"       "Fri, 01 Jan 1980 00:00:00 GMT" .
     setHeader "Pragma"        "no-cache" .
     setHeader "Cache-Control" "no-cache, max-age=0, must-revalidate"
 
-cacheForever :: Snap ()
+cacheForever :: MonadSnap m => m ()
 cacheForever = expires 31536000
 
 ------------------------------------------------------------------------
 
-expires :: Integer -> Snap ()
+expires :: MonadSnap m => Integer -> m ()
 expires seconds = do
     now <- liftIO getCurrentTime
     let expiry = addUTCTime (fromInteger seconds) now
@@ -69,20 +69,20 @@ formatHttpTime = B.pack . formatTime defaultTimeLocale "%a, %d %b %Y %X GMT"
 
 ------------------------------------------------------------------------
 
-routeTop :: [(ByteString, Snap a)] -> Snap a
+routeTop :: MonadSnap m => [(ByteString, m a)] -> m a
 routeTop = route . map (mapSnd ifTop)
   where
     mapSnd f (x, y) = (x, f y)
 
 ------------------------------------------------------------------------
 
-getParamBS :: ByteString -> Snap ByteString
+getParamBS :: MonadSnap m => ByteString -> m ByteString
 getParamBS = getParamMap Just
 
-getParamStr :: ByteString -> Snap String
+getParamStr :: MonadSnap m => ByteString -> m String
 getParamStr = getParamMap (Just . B.unpack)
 
-getParamMap :: (ByteString -> Maybe a) -> ByteString -> Snap a
+getParamMap :: MonadSnap m => (ByteString -> Maybe a) -> ByteString -> m a
 getParamMap f name = getParam name >>= \mstr -> case mstr of
     Nothing  -> throwEx ["parameter '", name, "' does not exist"]
     Just str -> case f str of
