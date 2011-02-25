@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module GitSnap.Application
     ( Application

@@ -1,0 +1,48 @@
+html, body {
+  height: 100%;
+  color: black;
+}
+body {
+  background-color: #e7f3ff;
+  font: 95% helvetica,arial,freesans,clean,sans-serif;
+  *font-size: small;
+}
+#content {
+  margin: 1em 2em;
+}
+#repo-list {
+  margin-left: 1em;
+}
+h1 {
+  font-size: 3em;
+  margin-bottom: 0.5em;
+}
+h1 .snap {
+  color: #036;
+}
+h2 {
+  font-size: 2em;
+  color: #333;
+  margin-bottom: 0.3em;
+}
+h1, h2, h3, h4 {
+  font-weight: bold;
+}
+li {
+  margin-bottom: 0.4em;
+}
+table {
+  font-size: inherit;
+}
+input[type=text], input[type=password], input[type=image], textarea {
+  font: 99% helvetica,arial,freesans,sans-serif;
+}
+select,option {
+  padding: 0 .25em;
+}
+optgroup {
+  margin-top: .5em;
+}
+input.text {
+  padding: 1px 0;
+}
