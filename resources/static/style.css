@@ -3,7 +3,7 @@ html, body {
   color: black;
 }
 body {
-  background-color: #e7f3ff;
+  background-color: #f7f0ff;
   font: 95% helvetica,arial,freesans,clean,sans-serif;
   *font-size: small;
 }
@@ -12,6 +12,13 @@ body {
 }
 #repo-list {
   margin-left: 1em;
+  font-size: 1.2em;
+}
+#repo-list a {
+  color: #1A6BB2;
+}
+#repo-list .repo-name {
+  font-weight: bold;
 }
 h1 {
   font-size: 3em;
@@ -23,7 +30,7 @@ h1 .snap {
 h2 {
   font-size: 2em;
   color: #333;
-  margin-bottom: 0.3em;
+  margin-bottom: 0.4em;
 }
 h1, h2, h3, h4 {
   font-weight: bold;

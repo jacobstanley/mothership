@@ -25,6 +25,7 @@ Executable gitsnap
   build-depends:       
       base          >= 4
     , blaze-builder == 0.2.*
+    , blaze-html    == 0.4.*
     , bytestring    == 0.9.*
     , directory     == 1.0.*
     , enumerator    == 0.4.*
