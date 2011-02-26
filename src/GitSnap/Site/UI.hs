@@ -13,10 +13,11 @@ import           Snap.Types hiding (path, dir)
 import           System.FilePath
 import           System.Directory
 import           Text.Blaze.Html5 hiding (map, head)
-import           Text.Blaze.Html5.Attributes hiding (title, hidden, dir)
+import           Text.Blaze.Html5.Attributes hiding (title, hidden, dir, span)
 import           Text.Blaze.Renderer.XmlHtml (renderHtml)
 import           Text.Templating.Heist
 import qualified Text.XmlHtml as X
+import           Prelude hiding (span)
 
 import           GitSnap.Application
 
@@ -41,11 +42,10 @@ repoSplice = htmlSplice . users
   where
     users = ul . mapM_ user
     user (User n rs) = forM_ rs $ \r -> li $ do
-        a ! href (textValue n) $ text n
-        text " / "
-        a ! href (textValue $ T.concat [n,"/",r])
-          ! class_ "repo-name"
-          $ text r
+        a ! href (textValue $ T.concat [n,"/",r]) $ do
+            text n
+            text "/"
+            span ! class_ "repo-name" $ text r
 
 htmlSplice :: Html -> Splice Application
 htmlSplice = return . docContent . renderHtml

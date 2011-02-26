@@ -7,6 +7,12 @@ body {
   font: 95% helvetica,arial,freesans,clean,sans-serif;
   *font-size: small;
 }
+a {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
 #content {
   margin: 1em 2em;
 }
