@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module GitSnap.Application
+module Mothership.Application
     ( Application
     , applicationInitializer
     ) where

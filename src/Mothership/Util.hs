@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module GitSnap.Util
+module Mothership.Util
     ( Process (..)
     , process
     ) where

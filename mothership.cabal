@@ -1,7 +1,7 @@
-name:           gitsnap
+name:           mothership
 version:        0.1
 synopsis:       Git Smart HTTP Server
-homepage:       http://github.com/jystic/gitsnap
+homepage:       http://github.com/jystic/mothership
 license:        BSD3
 license-file:   LICENSE
 author:         Jacob Stanley <jacob@stanley.io>
@@ -14,7 +14,7 @@ Flag development
   Description: Whether to build the server in development (interpreted) mode
   Default: False
 
-Executable gitsnap
+Executable mothership
   hs-source-dirs: src
   main-is: Main.hs
 

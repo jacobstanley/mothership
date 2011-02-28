@@ -10,8 +10,8 @@ import Snap.Http.Server (quickHttpServe)
 import Snap.Extension.Server
 #endif
 
-import GitSnap.Application
-import GitSnap.Site
+import Mothership.Application
+import Mothership.Site
 
 main :: IO ()
 #ifdef DEVELOPMENT

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module GitSnap.Site
+module Mothership.Site
     ( site
     , siteTH
     , getRepoDir
@@ -12,9 +12,9 @@ import           Snap.Util.FileServe
 import           System.FilePath
 import           System.Directory
 
-import           GitSnap.Application
-import           GitSnap.Site.UI
-import           GitSnap.Site.Git
+import           Mothership.Application
+import           Mothership.Site.UI
+import           Mothership.Site.Git
 
 ------------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module GitSnap.Snap
+module Mothership.Snap
     ( contentType
     , contentType'
     , cacheDisabled

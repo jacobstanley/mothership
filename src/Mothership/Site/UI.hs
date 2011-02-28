@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module GitSnap.Site.UI
+module Mothership.Site.UI
     ( serveUI
     ) where
 
@@ -19,7 +19,7 @@ import           Text.Templating.Heist
 import qualified Text.XmlHtml as X
 import           Prelude hiding (span)
 
-import           GitSnap.Application
+import           Mothership.Application
 
 ------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module GitSnap.Site.Git
+module Mothership.Site.Git
     ( serveGit
     ) where
 
@@ -15,9 +15,9 @@ import           System.FilePath
 import           System.Directory
 import           Text.Printf
 
-import           GitSnap.Application
-import           GitSnap.Snap
-import           GitSnap.Util
+import           Mothership.Application
+import           Mothership.Snap
+import           Mothership.Util
 
 ------------------------------------------------------------------------
 
