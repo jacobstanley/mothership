@@ -33,9 +33,8 @@ serveUI repoDir = route
 index :: FilePath -> Application ()
 index repoDir = do
     users <- getUsers repoDir
-    ifTop $ heistLocal (bindSplices $ splices users) $ render "index"
-  where
-    splices rs = [ ("repositories", repoSplice rs) ]
+    ifTop $ renderWithSplices "index"
+          [ ("repositories", repoSplice users) ]
 
 repoSplice :: [User] -> Splice Application
 repoSplice = htmlSplice . users
