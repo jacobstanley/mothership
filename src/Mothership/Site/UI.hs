@@ -32,15 +32,17 @@ serveUI = route
 
 index :: Application ()
 index = do
-    users <- getUsers =<< getRepoDir
+    users <- getRepoUsers =<< getRepoDir
     ifTop $ renderWithSplices "index"
           [ ("repositories", repoSplice users) ]
 
-repoSplice :: [User] -> Splice Application
+------------------------------------------------------------------------
+
+repoSplice :: [RepoUser] -> Splice Application
 repoSplice = htmlSplice . users
   where
     users = ul . mapM_ user
-    user (User n rs) = forM_ rs $ \r -> li $ do
+    user (RepoUser n rs) = forM_ rs $ \r -> li $ do
         a ! href (textValue $ T.concat [n,"/",r]) $ do
             text n
             text "/"
@@ -55,18 +57,18 @@ docContent (X.XmlDocument  _ _ ns) = ns
 
 ------------------------------------------------------------------------
 
-data User = User
+data RepoUser = RepoUser
     { _name  :: Text
     , _repos :: [Text]
     }
 
-getUsers :: MonadIO m => FilePath -> m [User]
-getUsers repoDir = do
+getRepoUsers :: MonadIO m => FilePath -> m [RepoUser]
+getRepoUsers repoDir = do
     names <- getDirectoryContents' repoDir
     repos <- mapM getRepoNames $ map (repoDir </>) names
     let namesT = map T.pack names
         reposT = map (map T.pack) repos
-    return $ zipWith User namesT reposT
+    return $ zipWith RepoUser namesT reposT
   where
     getRepoNames :: MonadIO m => FilePath -> m [String]
     getRepoNames dir = do
