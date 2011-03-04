@@ -10,9 +10,12 @@ module Mothership.Application
 
 import Control.Monad.Reader
 import System.FilePath ((</>))
-import System.Directory (getCurrentDirectory)
+import System.Directory (getCurrentDirectory, createDirectoryIfMissing)
+import Snap.Auth
 import Snap.Extension
+import Snap.Extension.DB.MongoDB
 import Snap.Extension.Heist.Impl
+import Snap.Extension.Session.CookieSession
 import Snap.Types (MonadSnap)
 
 ------------------------------------------------------------------------------
@@ -20,28 +23,41 @@ import Snap.Types (MonadSnap)
 type Application = SnapExtend ApplicationState
 
 data ApplicationState = ApplicationState
-    { templateState :: HeistState Application
-    , mothershipState :: MothershipState
+    { mothershipState :: MothershipState
+    , templateState   :: HeistState Application
+    , databaseState   :: MongoDBState
+    , sessionState    :: CookieSessionState
     }
-
-------------------------------------------------------------------------------
-
-instance HasHeistState Application ApplicationState where
-    getHeistState     = templateState
-    setHeistState s a = a { templateState = s }
 
 ------------------------------------------------------------------------------
 
 instance HasMothershipState ApplicationState where
     getMothershipState = mothershipState
 
+instance HasHeistState Application ApplicationState where
+    getHeistState     = templateState
+    setHeistState s a = a { templateState = s }
+
+instance HasMongoDBState ApplicationState where
+    getMongoDBState     = databaseState
+    setMongoDBState s a = a { databaseState = s }
+
+instance HasCookieSessionState ApplicationState where
+    getCookieSessionState = sessionState
+
+instance MonadAuth Application
+
 ------------------------------------------------------------------------------
 
 applicationInitializer :: Initializer ApplicationState
 applicationInitializer = do
-    heist <- heistInitializer "resources/templates" 
-    mship <- mothershipInitializer
-    return $ ApplicationState heist mship
+    mship    <- mothershipInitializer
+    heist    <- heistInitializer "resources/templates" 
+    database <- mongoDBInitializer (host "localhost") 1 "mothership"
+    session  <- cookieSessionStateInitializer $ defCookieSessionState
+                { csKeyPath    = "config/site.key"
+                , csCookieName = "mothership-session" }
+    return $ ApplicationState mship heist database session
 
 ------------------------------------------------------------------------------
 -- Mothership extension
@@ -70,4 +86,8 @@ instance InitializerState MothershipState where
 mothershipInitializer :: Initializer MothershipState
 mothershipInitializer = do
     dir <- liftIO getCurrentDirectory
-    mkInitializer $ MothershipState $ dir </> "repositories"
+    let repos  = dir </> "repositories"
+        config = dir </> "config"
+    liftIO $ createDirectoryIfMissing False repos
+    liftIO $ createDirectoryIfMissing False config
+    mkInitializer $ MothershipState repos

@@ -1,5 +1,6 @@
 *.swp
 *.log
+/config/
 /dist/
 /repositories/
 /tmp/
