@@ -8,26 +8,36 @@ body {
   *font-size: small;
 }
 a {
+  color: #1A6BB2;
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
 }
-#content {
+#main {
   margin: 1em 2em;
+}
+.topnav {
+  float: right;
+  font-weight: bold;
+}
+.topnav ul {
+  display: inline;
+}
+.topnav ul li {
+  display: inline;
+  margin-left: 0.8em;
 }
 #repo-list {
   margin-left: 1em;
   font-size: 1.2em;
-}
-#repo-list a {
-  color: #1A6BB2;
 }
 #repo-list .repo-name {
   font-weight: bold;
 }
 h1 {
   font-size: 3em;
+  font-weight: bold;
   margin-bottom: 0.5em;
 }
 h1 .ship {
@@ -37,9 +47,6 @@ h2 {
   font-size: 2em;
   color: #333;
   margin-bottom: 0.4em;
-}
-h1, h2, h3, h4 {
-  font-weight: bold;
 }
 li {
   margin-bottom: 0.4em;

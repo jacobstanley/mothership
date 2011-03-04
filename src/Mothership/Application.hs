@@ -53,7 +53,7 @@ applicationInitializer :: Initializer ApplicationState
 applicationInitializer = do
     mship    <- mothershipInitializer
     heist    <- heistInitializer "resources/templates" 
-    database <- mongoDBInitializer (host "localhost") 1 "mothership"
+    database <- mongoDBInitializer (host "127.0.0.1") 1 "mothership"
     session  <- cookieSessionStateInitializer $ defCookieSessionState
                 { csKeyPath    = "config/site.key"
                 , csCookieName = "mothership-session" }
