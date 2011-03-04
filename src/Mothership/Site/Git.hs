@@ -4,7 +4,6 @@ module Mothership.Site.Git
     ( serveGit
     ) where
 
-import           Control.Applicative ((<|>))
 import           Control.Monad
 import           Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as B
@@ -35,16 +34,16 @@ serveRepo = do
     repoExists <- liftIO $ doesDirectoryExist path
     guard repoExists
 
-    routes path
-  where
-    with m = method m . routeTop
-    routes path =
-         with POST [ ("git-upload-pack", rpc "upload-pack" path)
-                   , ("git-receive-pack", rpc "receive-pack" path)
-                   ]
-     <|> with GET  [ ("info/refs", infoRefs path)
-                   , textFile path "HEAD"
-                   ]
+    routeTop
+      [ ("git-upload-pack",  method POST $ rpc "upload-pack" path)
+      , ("git-receive-pack", method POST $ rpc "receive-pack" path)
+      , ("info/refs", method GET $ infoRefs path)
+      , ("HEAD",      method GET $ serveText $ path </> "HEAD") ]
+
+------------------------------------------------------------------------
+
+serveText :: FilePath -> Application ()
+serveText = serveFileAs "text/plain"
 
 ------------------------------------------------------------------------
 
@@ -84,16 +83,6 @@ pktWrite str = size `B.append` str
 
 pktWrite' :: [ByteString] -> ByteString
 pktWrite' = pktWrite . B.concat
-
-------------------------------------------------------------------------
-
-textFile :: FilePath -> ByteString -> (ByteString, Application ())
-textFile dir file = (file, serve)
-  where
-    path = dir </> B.unpack file
-    serve = do
-        liftIO $ putStrLn $ "Serving " ++ path
-        serveFileAs "text/plain" path
 
 ------------------------------------------------------------------------
 
