@@ -23,16 +23,16 @@ import           Mothership.Application
 
 ------------------------------------------------------------------------
 
-serveUI :: FilePath -> Application ()
-serveUI repoDir = route
-    [ ("/", index repoDir)
+serveUI :: Application ()
+serveUI = route
+    [ ("/", index)
     ]
 
 ------------------------------------------------------------------------
 
-index :: FilePath -> Application ()
-index repoDir = do
-    users <- getUsers repoDir
+index :: Application ()
+index = do
+    users <- getUsers =<< getRepoDir
     ifTop $ renderWithSplices "index"
           [ ("repositories", repoSplice users) ]
 
@@ -84,4 +84,3 @@ getDirectoryContents' dir = do
 hidden :: FilePath -> Bool
 hidden ('.':_) = True
 hidden _       = False
-

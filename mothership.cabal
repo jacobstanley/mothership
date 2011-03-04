@@ -31,7 +31,7 @@ Executable mothership
     , enumerator    == 0.4.*
     , filepath      == 1.1.*
     , heist         == 0.5.*
-    , monads-fd     == 0.1.*
+    , mtl           == 2.0.*
     , old-locale    == 1.0.*
     , process       == 1.0.*
     , snap          == 0.4.*

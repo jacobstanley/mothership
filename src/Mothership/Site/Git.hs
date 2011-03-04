@@ -21,11 +21,12 @@ import           Mothership.Util
 
 ------------------------------------------------------------------------
 
-serveGit :: FilePath -> Application ()
-serveGit repoDir = route [(":user/:repo", serveRepo repoDir)]
+serveGit :: Application ()
+serveGit = route [(":user/:repo", serveRepo)]
 
-serveRepo :: FilePath -> Application ()
-serveRepo repoDir = do
+serveRepo :: Application ()
+serveRepo = do
+    repoDir <- getRepoDir
     user <- getParamStr "user"
     repo <- getParamStr "repo"
 

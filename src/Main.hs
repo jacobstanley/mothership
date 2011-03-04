@@ -20,11 +20,10 @@ main = do
     -- automatically.  If any extra directories should be watched for
     -- updates, include them here.
     snap <- $(let extraWatcheDirs = ["resources/templates"]
-              in loadSnapTH 'applicationInitializer 'siteTH extraWatcheDirs)
+              in loadSnapTH 'applicationInitializer 'site extraWatcheDirs)
     quickHttpServe snap
 #else
 main = do
-    repoDir <- getRepoDir
-    quickHttpServe applicationInitializer (site repoDir)
+    quickHttpServe applicationInitializer site
 #endif
 

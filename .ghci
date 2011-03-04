@@ -1,4 +1,4 @@
-:set -hide-package mtl -hide-package MonadCatchIO-mtl
+:set -hide-package monads-fd -hide-package MonadCatchIO-mtl
 :set -isrc
 :set -Wall
 :set -fno-warn-unused-do-bind
