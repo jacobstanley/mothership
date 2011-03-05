@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Mothership.Snap
+module Snap.Util
     ( contentType
     , contentType'
     , cacheDisabled
@@ -14,8 +14,8 @@ module Mothership.Snap
     , getParamStr
     , getParamMap
 
-    , runRequestBody'
     , addToOutputBS
+    , decompressRequestBody
     ) where
 
 import           Blaze.ByteString.Builder
@@ -94,19 +94,17 @@ getParamMap f name = getParam name >>= \mstr -> case mstr of
 
 ------------------------------------------------------------------------
 
-runRequestBody' :: MonadSnap m => Iteratee ByteString IO a -> m a
-runRequestBody' iter = do
+addToOutputBS :: MonadSnap m => (forall a. Enumerator ByteString IO a) -> m ()
+addToOutputBS e = addToOutput $ mapEnum toByteString fromByteString e
+
+decompressRequestBody :: MonadSnap m => Iteratee ByteString IO a -> m a
+decompressRequestBody iter = do
     req <- getRequest
     runRequestBody $ decompress req $ iter
   where
     decompress req x = case getHeader "content-encoding" req of
         Just "gzip" -> joinI $ ungzip $$ x
         _ -> x
-
-addToOutputBS :: MonadSnap m => (forall a. Enumerator ByteString IO a) -> m ()
-addToOutputBS e = addToOutput $ mapEnum toByteString fromByteString e
-
-------------------------------------------------------------------------
 
 -- Stolen from http-enumerator (Network.HTTP.Enumerator.Zlib)
 ungzip :: MonadIO m => Enumeratee B.ByteString B.ByteString m b
