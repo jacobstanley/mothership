@@ -51,13 +51,15 @@ site = routes <|> serveDirectory "resources/static"
       , ("/:repo", git)
       ]
 
+------------------------------------------------------------------------
+
 git :: Application ()
 git = do
-    name <- getParamStr "repo"
-    guard (isRepo name)
+    repo <- getParamStr "repo"
+    guard (isRepo repo)
 
     dir <- getRepoDir
-    serveRepo (dir </> name)
+    serveRepo (dir </> repo)
 
 ------------------------------------------------------------------------
 
