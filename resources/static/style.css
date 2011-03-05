@@ -15,7 +15,7 @@ a:hover {
   text-decoration: underline;
 }
 #main {
-  margin: 1em 2em;
+  padding: 1em 2em;
 }
 .topnav {
   float: right;
