@@ -16,7 +16,7 @@
             <li><a href="/logout">Log Out</a></li>
           </ul>
         </div>
-        <h1><span class="mother">mother</span><span class="ship">ship</span></h1>
+        <h1><a href="/"><span class="mother">mother</span><span class="ship">ship</span></a></h1>
       </div>
       <div class="content">
         <content />
