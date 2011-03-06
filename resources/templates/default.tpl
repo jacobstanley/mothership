@@ -12,9 +12,9 @@
           <ul>
             <li><user /></li>
             <li><a href="/">Dashboard</a></li>
-            <li><a href="/signup">Sign Up</a></li>
-            <li><a href="/login">Log In</a></li>
-            <li><a href="/logout">Log Out</a></li>
+            <li><a href="/signup">Signup</a></li>
+            <li><a href="/login">Login</a></li>
+            <li><a href="/logout">Logout</a></li>
           </ul>
         </div>
         <h1><a href="/"><span class="mother">mother</span><span class="ship">ship</span></a></h1>
