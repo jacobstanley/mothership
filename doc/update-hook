@@ -1,0 +1,26 @@
+#!/bin/sh
+
+echo "update: STARTED"
+
+ref="$1"
+old="$2"
+new="$3"
+
+echo "ref: $ref"
+echo "old: $old"
+echo "new: $new"
+
+zero="0000000000000000000000000000000000000000"
+empty="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
+if [ "$old" = "$zero" ]; then
+    old=$empty
+fi
+
+if [ "$new" = "$zero" ]; then
+    new=$empty
+fi
+
+git diff --name-only $old $new
+
+echo "update: DONE"
