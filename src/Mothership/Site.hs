@@ -90,7 +90,7 @@ signup :: Application ()
 signup = do
     ps <- getParams
     let usr = createUser ps
-    au <- saveAuthUser (authUser usr, ["full_name" =: userFullName usr])
+    au <- saveAuthUser (authUser usr, userToDoc usr)
     case au of
         Nothing  -> newSignup
         Just au' -> do
@@ -99,6 +99,7 @@ signup = do
 
 data User = User
    { authUser     :: AuthUser
+   , userUsername :: ByteString
    , userFullName :: ByteString
    } deriving (Show)
 
@@ -107,6 +108,7 @@ createUser ps = User
     { authUser = emptyAuthUser
         { userEmail    = Just $ lookup' "email"
         , userPassword = Just $ ClearText $ lookup' "password" }
+    , userUsername = lookup' "username"
     , userFullName = lookup' "full_name" }
   where
     lookup' :: ByteString -> ByteString
@@ -114,6 +116,11 @@ createUser ps = User
         Just (x:_) -> x
         _          -> error $ "createUser: cannot create without "
                            ++ "parameter '" ++ B.unpack k ++ "'"
+
+userToDoc :: User -> Document
+userToDoc usr =
+    [ "username"  =: userUsername usr
+    , "full_name" =: userFullName usr ]
 
 ------------------------------------------------------------------------
 

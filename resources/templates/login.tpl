@@ -1,12 +1,16 @@
 <apply template="default">
-  <h2>Log in</h2>
+  <h2>Log in to Mothership</h2>
   <form method="post">
 
-    <label for="email">Email Address</label>
-    <input id="email" name="email" type="text" />
+    <dl>
+      <dt><label for="username">Username</label></dt>
+      <dd><input id="username" name="username" type="text" autofocus /></dd>
+    </dl>
 
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" />
+    <dl>
+      <dt><label for="password">Password</label></dt>
+      <dd><input id="password" name="password" type="password" /></dd>
+    </dl>
 
     <button type="submit">Log in</button>
 

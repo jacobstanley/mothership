@@ -45,7 +45,8 @@ instance HasMongoDBState ApplicationState where
 instance HasCookieSessionState ApplicationState where
     getCookieSessionState = sessionState
 
-instance MonadAuth Application
+instance MonadAuth Application where
+    authAuthenticationKeys = return ["username"]
 
 ------------------------------------------------------------------------------
 
