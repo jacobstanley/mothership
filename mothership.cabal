@@ -43,6 +43,7 @@ Executable mothership
     , time          == 1.1.*
     , xmlhtml       == 0.1.*
     , zlib-bindings == 0.0.*
+    , base64-bytestring         == 0.1.*
     , MonadCatchIO-transformers == 0.2.*
     , snap-extension-mongodb    == 0.3.*
 

@@ -31,6 +31,7 @@ import           Prelude hiding (span)
 
 import           Mothership.Application
 import           Snap.Util
+import           Snap.Util.BasicAuth
 import           Snap.Util.Git
 
 ------------------------------------------------------------------------
@@ -58,8 +59,16 @@ git = do
     repo <- getParamStr "repo"
     guard (isRepo repo)
 
+    basicAuth "Mothership" attemptLogin
+
     dir <- getRepoDir
     serveRepo (dir </> repo)
+  where
+    attemptLogin username password = do
+        user <- performLogin euid password False
+        return (user /= Nothing)
+      where
+        euid = EUId $ M.fromList [("username", [username])]
 
 ------------------------------------------------------------------------
 
