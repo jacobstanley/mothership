@@ -1,6 +1,11 @@
 <apply template="default">
+
+<header>
   <h2>All Repositories</h2>
-  <div id="repo-list">
-    <repositories/>
-  </div>
+</header>
+
+<div id="repo-list">
+  <repositories/>
+</div>
+
 </apply>

@@ -1,12 +1,15 @@
-html, body {
+html {
+  color: #444;
+  background-color: #f9f9f9;
   height: 100%;
-  color: black;
+  display: block;
 }
 body {
-  background-color: #f9f9f9;
   font: 95% helvetica,arial,freesans,clean,sans-serif;
   *font-size: small;
+  padding: 1em 2em;
 }
+
 a {
   color: #1A6BB2;
   text-decoration: none;
@@ -14,27 +17,7 @@ a {
 a:hover {
   text-decoration: underline;
 }
-#main {
-  padding: 1em 2em;
-}
-.topnav {
-  float: right;
-  font-weight: bold;
-}
-.topnav ul {
-  display: inline;
-}
-.topnav ul li {
-  display: inline;
-  margin-left: 0.8em;
-}
-#repo-list {
-  margin-left: 1em;
-  font-size: 1.2em;
-}
-#repo-list .repo-name {
-  font-weight: bold;
-}
+
 h1 {
   font-size: 3em;
   font-weight: bold;
@@ -54,21 +37,46 @@ h2 {
   color: #333;
   margin-bottom: 0.4em;
 }
+
 li {
   margin-bottom: 0.4em;
 }
+
 table {
   font-size: inherit;
 }
+
 input[type=text], input[type=password], input[type=image], textarea {
   font: 99% helvetica,arial,freesans,sans-serif;
+  padding: 1px 0;
 }
-select,option {
-  padding: 0 .25em;
+select, option {
+  padding: 0 0.25em;
 }
 optgroup {
-  margin-top: .5em;
+  margin-top: 0.5em;
 }
-input.text {
-  padding: 1px 0;
+
+nav {
+  float: right;
+  font-weight: bold;
+}
+nav ul {
+  display: inline;
+}
+nav ul li {
+  display: inline;
+  margin-left: 0.8em;
+}
+nav .user {
+  color: #000;
+  font-weight: bold;
+}
+
+#repo-list {
+  margin-left: 1em;
+  font-size: 1.2em;
+}
+#repo-list .repo-name {
+  font-weight: bold;
 }

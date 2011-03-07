@@ -139,7 +139,7 @@ userSplice = do
     let user = case au of
           Nothing -> ("" :: ByteString)
           Just (_, usr) -> "full_name" `at` usr
-    htmlSplice (span $ text $ decodeUtf8 user)
+    htmlSplice (text $ decodeUtf8 user)
 
 ------------------------------------------------------------------------
 
