@@ -4,7 +4,7 @@ module Mothership.Site
     ( site
     ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative ((<|>), (<$>))
 import           Control.Monad (guard)
 import           Control.Monad.Trans (MonadIO, liftIO, lift)
 import qualified Data.ByteString.Char8 as B
@@ -39,7 +39,7 @@ import           Snap.Util.Git
 site :: Application ()
 site = routes <|> serveDirectory "resources/static"
   where
-    routes = route
+    routes = withSplices $ route
       [ ("/", home)
 
       , ("/login",  method GET  newLogin)
@@ -76,8 +76,7 @@ home :: Application ()
 home = do
     repos <- getRepoNames =<< getRepoDir
     ifTop $ renderWithSplices "home"
-          [ ("repositories", repoSplice repos)
-          , ("user", userSplice) ]
+          [ ("repositories", repoSplice repos) ]
 
 ------------------------------------------------------------------------
 
@@ -133,13 +132,35 @@ userToDoc usr =
 
 ------------------------------------------------------------------------
 
-userSplice :: Splice Application
-userSplice = do
-    au <- lift currentAuthUser
-    let user = case au of
-          Nothing -> ("" :: ByteString)
-          Just (_, usr) -> "full_name" `at` usr
-    htmlSplice (text $ decodeUtf8 user)
+withSplices :: Application a -> Application a
+withSplices = heistLocal (bindSplices splices)
+
+splices :: [(Text, Splice Application)]
+splices =
+    [ ("ifLoggedIn", ifLoggedIn)
+    , ("ifGuest", ifGuest)
+    , ("currentUser", currentUserSplice) ]
+
+-- TODO: Remove duplication here
+
+ifLoggedIn :: Splice Application
+ifLoggedIn = do
+    ns <- X.childNodes <$> getParamNode
+    musr <- lift currentAuthUser
+    return $ maybe [] (const ns) musr
+
+ifGuest :: Splice Application
+ifGuest = do
+    ns <- X.childNodes <$> getParamNode
+    musr <- lift currentAuthUser
+    return $ maybe ns (const []) musr
+
+currentUserSplice :: Splice Application
+currentUserSplice = do
+    musr <- lift currentAuthUser
+    htmlSplice $ text $ maybe "" nameText musr
+  where
+    nameText = decodeUtf8 . at "full_name" . snd
 
 ------------------------------------------------------------------------
 

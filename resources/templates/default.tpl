@@ -11,11 +11,15 @@
     <header>
       <nav>
         <ul>
-          <li><span class="user"><user/></span></li>
+          <ifLoggedIn>
+          <li><span class="user"><currentUser/></span></li>
           <li><a href="/">Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+          </ifLoggedIn>
+          <ifGuest>
           <li><a href="/signup">Signup</a></li>
           <li><a href="/login">Login</a></li>
-          <li><a href="/logout">Logout</a></li>
+          </ifGuest>
         </ul>
       </nav>
       <h1><a href="/"><span class="mother">mother</span><span class="ship">ship</span></a></h1>

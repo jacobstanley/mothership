@@ -53,7 +53,7 @@ instance MonadAuth Application where
 applicationInitializer :: Initializer ApplicationState
 applicationInitializer = do
     mship    <- mothershipInitializer
-    heist    <- heistInitializer "resources/templates" 
+    heist    <- heistInitializer "resources/templates"
     database <- mongoDBInitializer (host "127.0.0.1") 1 "mothership"
     session  <- cookieSessionStateInitializer $ defCookieSessionState
                 { csKeyPath    = "config/site.key"
