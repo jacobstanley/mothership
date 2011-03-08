@@ -107,7 +107,9 @@ a.button:hover, button:hover {
   text-decoration: none;
 }
 
-a.button, button { -webkit-text-stroke: 1px transparent; } /* Snow Leopard Safari Type Fix */
+a.button, button {
+  -webkit-text-stroke: 1px transparent;
+} /* Snow Leopard Safari Type Fix */
 @media only screen and (max-device-width:480px) {
   a.button, button { -webkit-text-stroke: 0 black; }
 } /* Undo the fix for Mobile Safari */
