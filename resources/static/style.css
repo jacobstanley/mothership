@@ -49,6 +49,7 @@ table {
 input[type=text], input[type=password], input[type=image], textarea {
   font: 99% helvetica,arial,freesans,sans-serif;
   padding: 1px 0;
+  margin-bottom: 0.5em;
 }
 select, option {
   padding: 0 0.25em;
@@ -75,8 +76,37 @@ nav .user {
 
 #repo-list {
   margin-left: 1em;
+  margin-bottom: 1em;
   font-size: 1.2em;
 }
 #repo-list .repo-name {
   font-weight: bold;
 }
+
+a.button, button {
+  background: #036 url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAyCAYAAACd+7GKAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAClJREFUeNpi/v//vwMTAwPDfzjBgMpFI/7hFSOT9Y8qRuF3JLoHAQIMAHYtMmRA+CugAAAAAElFTkSuQmCC") repeat-x;
+  display: inline-block;
+  padding: 0.6em 0.9em;
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  line-height: 1;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+  -moz-box-shadow: 0 1px 3px #999;
+  -webkit-box-shadow: 0 1px 3px #999;
+  text-shadow: 0 -1px 1px #222;
+  border: 0;
+  border-bottom: 1px solid #222;
+  position: relative;
+  cursor: pointer;
+}
+a.button:hover, button:hover {
+  background-color: #0B5096;
+  text-decoration: none;
+}
+
+a.button, button { -webkit-text-stroke: 1px transparent; } /* Snow Leopard Safari Type Fix */
+@media only screen and (max-device-width:480px) {
+  a.button, button { -webkit-text-stroke: 0 black; }
+} /* Undo the fix for Mobile Safari */
