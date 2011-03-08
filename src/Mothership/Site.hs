@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Mothership.Site
     ( site
     ) where
 
-import           Control.Applicative ((<|>), (<$>))
-import           Control.Monad (guard)
+import           Control.Applicative ((<|>))
+import           Control.Monad (guard, liftM)
 import           Control.Monad.Trans (MonadIO, liftIO, lift)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
@@ -26,6 +27,7 @@ import           Text.Blaze.Html5 hiding (map, head, time)
 import           Text.Blaze.Html5.Attributes (href, class_)
 import           Text.Blaze.Renderer.XmlHtml (renderHtml)
 import           Text.Templating.Heist
+import           Text.Templating.Heist.Splices.Ignore
 import qualified Text.XmlHtml as X
 import           Prelude hiding (span)
 
@@ -137,30 +139,26 @@ withSplices = heistLocal (bindSplices splices)
 
 splices :: [(Text, Splice Application)]
 splices =
-    [ ("ifLoggedIn", ifLoggedIn)
-    , ("ifGuest", ifGuest)
-    , ("currentUser", currentUserSplice) ]
+    [ ("ifLoggedIn",   ifLoggedInSplice)
+    , ("ifGuest",      ifGuestSplice)
+    , ("userFullName", userFullNameSplice) ]
 
--- TODO: Remove duplication here
+ifLoggedInSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
+ifLoggedInSplice = ifLoggedIn childNodes ignoreImpl
 
-ifLoggedIn :: Splice Application
-ifLoggedIn = do
-    ns <- X.childNodes <$> getParamNode
-    musr <- lift currentAuthUser
-    return $ maybe [] (const ns) musr
+ifGuestSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
+ifGuestSplice = ifLoggedIn ignoreImpl childNodes
 
-ifGuest :: Splice Application
-ifGuest = do
-    ns <- X.childNodes <$> getParamNode
-    musr <- lift currentAuthUser
-    return $ maybe ns (const []) musr
+ifLoggedIn :: (MonadAuth m, MonadMongoDB m) => Splice m -> Splice m -> Splice m
+ifLoggedIn yes no = lift authenticatedUserId >>= maybe no (const yes)
 
-currentUserSplice :: Splice Application
-currentUserSplice = do
-    musr <- lift currentAuthUser
-    htmlSplice $ text $ maybe "" nameText musr
+childNodes :: Monad m => Splice m
+childNodes = liftM X.childNodes getParamNode
+
+userFullNameSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
+userFullNameSplice = lift currentAuthUser >>= return . maybe [] name
   where
-    nameText = decodeUtf8 . at "full_name" . snd
+    name = return . X.TextNode . decodeUtf8 . at "full_name" . snd
 
 ------------------------------------------------------------------------
 
@@ -173,7 +171,7 @@ repoSplice = htmlSplice . repos
           ! class_ "repo-name"
           $ text name
 
-htmlSplice :: Html -> Splice Application
+htmlSplice :: Monad m => Html -> Splice m
 htmlSplice = return . docContent . renderHtml
 
 docContent :: X.Document -> [X.Node]

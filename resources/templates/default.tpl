@@ -12,7 +12,7 @@
       <nav>
         <ul>
           <ifLoggedIn>
-          <li><span class="user"><currentUser/></span></li>
+          <li><span class="user"><userFullName/></span></li>
           <li><a href="/">Dashboard</a></li>
           <li><a href="/logout">Logout</a></li>
           </ifLoggedIn>
