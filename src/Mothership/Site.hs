@@ -51,6 +51,8 @@ site = routes <|> serveDirectory "resources/static"
       , ("/signup", method GET  newSignup)
       , ("/signup", method POST signup)
 
+      , ("/repositories/new", method GET newRepository)
+
       , ("/:repo", git)
       ]
 
@@ -131,6 +133,11 @@ userToDoc :: User -> Document
 userToDoc usr =
     [ "username"  =: userUsername usr
     , "full_name" =: userFullName usr ]
+
+------------------------------------------------------------------------
+
+newRepository :: Application ()
+newRepository = render "newrepo"
 
 ------------------------------------------------------------------------
 

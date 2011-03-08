@@ -8,4 +8,6 @@
   <repositories/>
 </div>
 
+<a class="button" href="/repositories/new">Create a repository</a>
+
 </apply>

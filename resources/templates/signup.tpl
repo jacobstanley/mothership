@@ -25,7 +25,7 @@
     <dd><input id="password" name="password" type="password"></dd>
   </dl>
 
-  <button type="submit">Create an account</button>
+  <button type="submit">Create account</button>
 </form>
 
 </apply>
