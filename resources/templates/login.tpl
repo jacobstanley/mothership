@@ -7,7 +7,7 @@
 <form method="post">
   <dl>
     <dt><label for="username">Username</label></dt>
-    <dd><input id="username" name="username" type="text" autofocus></dd>
+    <dd><input id="username" name="username" type="text" class="autofocus"></dd>
   </dl>
 
   <dl>

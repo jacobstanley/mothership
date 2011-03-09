@@ -7,7 +7,7 @@
 <form method="post" action="/repositories">
   <dl>
     <dt><label for="name">Repository Name</label></dt>
-    <dd><input id="name" name="name" type="text" autofocus></dd>
+    <dd><input id="name" name="name" type="text" class="autofocus"></dd>
   </dl>
 
   <dl>
