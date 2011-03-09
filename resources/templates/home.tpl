@@ -1,13 +1,11 @@
-<apply template="default">
+<apply template='default'>
 
-<header>
-  <h2>All Repositories</h2>
-</header>
+<h2>All Repositories</h2>
 
-<div id="repo-list">
+<div id='repo-list'>
   <repositories/>
 </div>
 
-<a class="button" href="/repositories/new">Create a repository</a>
+<a class='button' href='/repositories/new'>New repository</a>
 
 </apply>

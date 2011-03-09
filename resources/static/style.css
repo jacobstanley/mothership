@@ -31,7 +31,7 @@ h1 .ship {
   color: #036;
 }
 h2 {
-  font-size: 2em;
+  font-size: 1.8em;
   color: #333;
   margin-bottom: 0.4em;
 }
@@ -56,20 +56,20 @@ optgroup {
   margin-top: 0.5em;
 }
 
-nav {
+#nav {
   float: right;
 }
-nav ul {
+#nav ul {
   display: inline;
 }
-nav ul li {
+#nav ul li {
   display: inline;
   margin-left: 0.8em;
 }
-nav a {
+#nav a {
   font-weight: bold;
 }
-nav .user {
+#nav .user {
   color: #000;
   font-weight: bold;
 }
