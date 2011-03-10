@@ -21,8 +21,8 @@ Executable mothership
   if flag(development)
     cpp-options: -DDEVELOPMENT
     build-depends: hint >= 0.3.2 && < 0.4
-  
-  build-depends:       
+
+  build-depends:
       base          >= 4
     , blaze-builder == 0.2.*
     , blaze-html    == 0.4.*
