@@ -5,7 +5,7 @@ module Mothership.Site
     ( site
     ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative ((<|>), (<$>))
 import           Control.Monad (guard, liftM)
 import           Control.Monad.Trans (MonadIO, liftIO, lift)
 import qualified Data.ByteString.Char8 as B
@@ -29,9 +29,10 @@ import           Text.Blaze.Renderer.XmlHtml (renderHtml)
 import           Text.Templating.Heist
 import           Text.Templating.Heist.Splices.Ignore
 import qualified Text.XmlHtml as X
-import           Prelude hiding (span)
+import           Prelude hiding (span, lookup)
 
 import           Mothership.Application
+import           Mothership.Types
 import           Snap.Util
 import           Snap.Util.BasicAuth
 import           Snap.Util.Git
@@ -100,39 +101,32 @@ newSignup = render "signup"
 
 signup :: Application ()
 signup = do
-    ps <- getParams
-    let usr = createUser ps
-    au <- saveAuthUser (authUser usr, userToDoc usr)
+    (authUser, user) <- createUser <$> getParams
+    au <- saveAuthUser (authUser, toDoc user)
     case au of
         Nothing  -> newSignup
         Just au' -> do
             setSessionUserId (userId au')
             redirect "/"
 
-data User = User
-   { authUser     :: AuthUser
-   , userUsername :: ByteString
-   , userFullName :: ByteString
-   } deriving (Show)
-
-createUser :: Params -> User
-createUser ps = User
-    { authUser = emptyAuthUser
-        { userEmail    = Just $ lookup' "email"
-        , userPassword = Just $ ClearText $ lookup' "password" }
-    , userUsername = lookup' "username"
-    , userFullName = lookup' "full_name" }
+createUser :: Params -> (AuthUser, User)
+createUser ps =
+    ( emptyAuthUser
+        { userEmail    = Just $ lookupBS "email"
+        , userPassword = Just $ ClearText $ lookupBS "password" }
+    , User
+        { userUsername = lookupT "username"
+        , userFullName = lookupT "full_name" }
+    )
   where
-    lookup' :: ByteString -> ByteString
-    lookup' k = case M.lookup k ps of
+    lookupBS :: ByteString -> ByteString
+    lookupBS k = case M.lookup k ps of
         Just (x:_) -> x
         _          -> error $ "createUser: cannot create without "
                            ++ "parameter '" ++ B.unpack k ++ "'"
 
-userToDoc :: User -> Document
-userToDoc usr =
-    [ "username"  =: userUsername usr
-    , "full_name" =: userFullName usr ]
+    lookupT :: ByteString -> Text
+    lookupT = decodeUtf8 . lookupBS
 
 ------------------------------------------------------------------------
 
