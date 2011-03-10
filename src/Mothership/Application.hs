@@ -18,6 +18,8 @@ import Snap.Extension.Heist.Impl
 import Snap.Extension.Session.CookieSession
 import Snap.Types (MonadSnap)
 
+import Mothership.Types (uniqueIndexes)
+
 ------------------------------------------------------------------------------
 
 type Application = SnapExtend ApplicationState
@@ -54,11 +56,30 @@ applicationInitializer :: Initializer ApplicationState
 applicationInitializer = do
     mship    <- mothershipInitializer
     heist    <- heistInitializer "resources/templates"
-    database <- mongoDBInitializer (host "127.0.0.1") 1 "mothership"
     session  <- cookieSessionStateInitializer $ defCookieSessionState
                 { csKeyPath    = "config/site.key"
                 , csCookieName = "mothership-session" }
+
+    database <- mongoDBInitializer (host "127.0.0.1") 1 "mothership"
+    ensureIndexes database
+
     return $ ApplicationState mship heist database session
+
+------------------------------------------------------------------------------
+-- MongoDB intialization
+
+ensureIndexes :: MongoDBState -> Initializer ()
+ensureIndexes db = initDB db $ mapM_ (ensureIndex . unique) uniqueIndexes
+  where
+    unique :: (Collection, Label) -> Index
+    unique (c, l) = (index c [l =: (1 :: Int)])
+                  { iUnique = True, iDropDups = True }
+
+-- Would be nice for something like this to be in snap-extension-mongodb
+initDB :: MongoDBState -> ReaderT Database (Action IO) a -> Initializer a
+initDB (MongoDBState pool db) run = do
+    x <- liftIO . access safe Master pool $ use db run
+    either (error . show) return x
 
 ------------------------------------------------------------------------------
 -- Mothership extension

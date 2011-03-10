@@ -5,6 +5,7 @@ module Mothership.Types
     ( Bson (..)
     , User (..)
     , Repository (..)
+    , uniqueIndexes
     ) where
 
 import           Control.Applicative ((<$>), (<*>))
@@ -48,3 +49,9 @@ instance Bson Repository where
               , "description" =: repoDescription x]
     fromDoc x = Repository <$> lookup "name" x
                            <*> lookup "description" x
+
+------------------------------------------------------------------------
+
+uniqueIndexes :: [(Collection, Label)]
+uniqueIndexes = [ ("users", "username")
+                , ("repositories", "name") ]
