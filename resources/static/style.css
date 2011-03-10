@@ -107,7 +107,7 @@ a.button, button {
   -moz-transition: box-shadow 0.1s ease-in-out;
   -o-transition: box-shadow 0.1s ease-in-out;
 
-  color: #4f4f4f;
+  color: #333;
   text-shadow: 0px 1px 1px rgba(255,255,255,0.75);
   font-weight: bold;
 
@@ -117,12 +117,18 @@ a.button, button {
 }
 a.button:hover, button:hover,
 a.button:focus, button:focus {
-    box-shadow:
-      0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
-    -webkit-box-shadow:
-      0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
-    -moz-box-shadow:
-      0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+  box-shadow:
+    0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+  -webkit-box-shadow:
+    0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+  -moz-box-shadow:
+    0 0 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+
+  border: 1px solid #999;
+  border-top-color: #aaa;
+  border-bottom-color: #888;
+
+  color: #1f1f1f;
 }
 a.button:active, button:active {
   background: #ccc;
