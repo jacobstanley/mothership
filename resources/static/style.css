@@ -36,14 +36,6 @@ h2 {
   margin-bottom: 0.4em;
 }
 
-li {
-  margin-bottom: 0.4em;
-}
-
-table {
-  font-size: inherit;
-}
-
 input[type=text], input[type=password], input[type=image], textarea {
   font: 100% helvetica, arial, freesans, sans-serif;
   padding: 1px 0;
@@ -74,13 +66,25 @@ optgroup {
   font-weight: bold;
 }
 
-#repo-list {
+#repositories {
   font-size: 1.1em;
-  margin: 0 0 1.3em 0.5em;
+  margin: 0 0 0.95em 0.0em;
+}
+#repositories li:first-child {
+  border-top: none;
+  padding: 0 0 0.4em 0;
+}
+#repositories li {
+  border-top: 1px #ddd solid;
+  padding: 0.35em 0 0.4em 0;
+}
+#repositories .description {
+  font-size: 0.8em;
+  color: #666;
 }
 
 button {
-  margin-top: 0.45em;
+  margin-top: 0.25em;
 }
 
 a.button, button {

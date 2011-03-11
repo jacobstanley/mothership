@@ -6,7 +6,7 @@ module Mothership.Site
     ) where
 
 import           Control.Applicative ((<|>), (<$>))
-import           Control.Monad (guard)
+import           Control.Monad
 import           Control.Monad.Trans (lift)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
@@ -21,9 +21,6 @@ import           Snap.Extension.Session.CookieSession
 import           Snap.Types hiding (path, dir)
 import           Snap.Util.FileServe
 import           System.FilePath
-import           Text.Blaze.Html5 hiding (map, head, time)
-import           Text.Blaze.Html5.Attributes (href, class_)
-import           Text.Blaze.Renderer.XmlHtml (renderHtml)
 import           Text.Templating.Heist
 import qualified Text.XmlHtml as X
 import           Prelude hiding (span, lookup)
@@ -182,16 +179,32 @@ isRepo = (== ".git") . takeExtension
 ------------------------------------------------------------------------
 
 repoSplice :: Splice Application
-repoSplice = lift findAll >>= htmlSplice . repos
+repoSplice = do
+    repos <- lift findAll
+    mapBind' mkSplices repos
   where
-    repos = ul . mapM_ repo
-    repo x = li $ do
-        a ! href (textValue $ repoName x)
-          ! class_ "repo-name"
-          $ text (repoName x)
+    mkSplices :: Repository -> [(Text, Splice Application)]
+    mkSplices r = [ ("name", text $ repoName r)
+                  , ("description", text $ repoDescription r) ]
+    text = return . return . X.TextNode
 
-htmlSplice :: Monad m => Html -> Splice m
-htmlSplice = return . content . renderHtml
+------------------------------------------------------------------------
+-- Heist 0.5.x
+
+mapBind' :: (Monad m) => (a -> [(Text, Splice m)]) -> [a] -> Splice m
+mapBind' f = liftM concat . mapM localSplices
   where
-    content (X.HtmlDocument _ _ ns) = ns
-    content (X.XmlDocument  _ _ ns) = ns
+    localSplices v = localTS
+        (bindSplices $ f v)
+        (runNodeList =<< liftM X.childNodes getParamNode)
+
+localTS :: Monad m
+        => (TemplateState m -> TemplateState m)
+        -> TemplateMonad m a
+        -> TemplateMonad m a
+localTS f k = do
+    ts <- getTS
+    putTS $ f ts
+    res <- k
+    restoreTS ts
+    return res
