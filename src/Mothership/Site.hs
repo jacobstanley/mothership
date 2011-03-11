@@ -7,22 +7,20 @@ module Mothership.Site
 
 import           Control.Applicative ((<|>), (<$>))
 import           Control.Monad (guard, liftM)
-import           Control.Monad.Trans (MonadIO, liftIO, lift)
+import           Control.Monad.Trans (lift)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.Map as M
-import qualified Data.Text as T
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import           Snap.Auth
 import           Snap.Auth.Handlers
-import           Snap.Extension.DB.MongoDB
+import           Snap.Extension.DB.MongoDB (MonadMongoDB)
 import           Snap.Extension.Heist
 import           Snap.Extension.Session.CookieSession
 import           Snap.Types hiding (path, dir)
 import           Snap.Util.FileServe
 import           System.FilePath
-import           System.Directory
 import           Text.Blaze.Html5 hiding (map, head, time)
 import           Text.Blaze.Html5.Attributes (href, class_)
 import           Text.Blaze.Renderer.XmlHtml (renderHtml)
@@ -52,36 +50,18 @@ site = routes <|> serveDirectory "resources/static"
       , ("/signup", method GET  newSignup)
       , ("/signup", method POST signup)
 
-      , ("/repositories/new", method GET newRepository)
+      , ("/repositories/new", method GET  newRepo)
+      , ("/repositories",     method POST createRepo)
 
       , ("/:repo", git)
       ]
 
 ------------------------------------------------------------------------
 
-git :: Application ()
-git = do
-    repo <- getParamStr "repo"
-    guard (isRepo repo)
-
-    basicAuth "Mothership" attemptLogin
-
-    dir <- getRepoDir
-    serveRepo (dir </> repo)
-  where
-    attemptLogin username password = do
-        user <- performLogin euid password False
-        return (user /= Nothing)
-      where
-        euid = EUId $ M.fromList [("username", [username])]
-
-------------------------------------------------------------------------
-
 home :: Application ()
 home = do
-    repos <- getRepoNames =<< getRepoDir
     ifTop $ renderWithSplices "home"
-          [ ("repositories", repoSplice repos) ]
+          [ ("repositories", repoSplice) ]
 
 ------------------------------------------------------------------------
 
@@ -112,26 +92,41 @@ signup = do
 createUser :: Params -> (AuthUser, User)
 createUser ps =
     ( emptyAuthUser
-        { userEmail    = Just $ lookupBS "email"
-        , userPassword = Just $ ClearText $ lookupBS "password" }
+        { userEmail    = Just $ lookupBS "email" ps
+        , userPassword = Just $ ClearText $ lookupBS "password" ps }
     , User
-        { userUsername = lookupT "username"
-        , userFullName = lookupT "full_name" }
+        { userUsername = lookupT "username" ps
+        , userFullName = lookupT "full_name" ps }
     )
-  where
-    lookupBS :: ByteString -> ByteString
-    lookupBS k = case M.lookup k ps of
-        Just (x:_) -> x
-        _          -> error $ "createUser: cannot create without "
-                           ++ "parameter '" ++ B.unpack k ++ "'"
 
-    lookupT :: ByteString -> Text
-    lookupT = decodeUtf8 . lookupBS
+currentUser :: (MonadAuth m, MonadMongoDB m) => m (Maybe User)
+currentUser = toUser <$> currentAuthUser
+  where
+    toUser x = fmap snd x >>= fromDoc
+
+lookupBS :: ByteString -> Params -> ByteString
+lookupBS k ps = case M.lookup k ps of
+    Just (x:_) -> x
+    _          -> error $ "createUser: cannot create without "
+                       ++ "parameter '" ++ B.unpack k ++ "'"
+
+lookupT :: ByteString -> Params -> Text
+lookupT k = decodeUtf8 . lookupBS k
 
 ------------------------------------------------------------------------
 
-newRepository :: Application ()
-newRepository = render "newrepo"
+newRepo :: Application ()
+newRepo = render "newrepo"
+
+createRepo :: Application ()
+createRepo = do
+    ps <- getParams
+    insert (repo ps)
+    redirect "/"
+  where
+    repo ps = Repository
+        { repoName = lookupT "name" ps
+        , repoDescription = lookupT "description" ps }
 
 ------------------------------------------------------------------------
 
@@ -157,20 +152,41 @@ childNodes :: Monad m => Splice m
 childNodes = liftM X.childNodes getParamNode
 
 userFullNameSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
-userFullNameSplice = lift currentAuthUser >>= return . maybe [] name
+userFullNameSplice = lift currentUser >>= return . maybe [] name
   where
-    name = return . X.TextNode . decodeUtf8 . at "full_name" . snd
+    name = return . X.TextNode . userFullName
 
 ------------------------------------------------------------------------
 
-repoSplice :: [Text] -> Splice Application
-repoSplice = htmlSplice . repos
+git :: Application ()
+git = do
+    repo <- getParamStr "repo"
+    guard (isRepo repo)
+
+    basicAuth "Mothership" attemptLogin
+
+    dir <- getRepoDir
+    serveRepo (dir </> repo)
+  where
+    attemptLogin username password = do
+        user <- performLogin euid password False
+        return (user /= Nothing)
+      where
+        euid = EUId $ M.fromList [("username", [username])]
+
+isRepo :: FilePath -> Bool
+isRepo = (== ".git") . takeExtension
+
+------------------------------------------------------------------------
+
+repoSplice :: Splice Application
+repoSplice = lift findAll >>= htmlSplice . repos
   where
     repos = ul . mapM_ repo
-    repo name = li $ do
-        a ! href (textValue name)
+    repo x = li $ do
+        a ! href (textValue $ repoName x)
           ! class_ "repo-name"
-          $ text name
+          $ text (repoName x)
 
 htmlSplice :: Monad m => Html -> Splice m
 htmlSplice = return . docContent . renderHtml
@@ -178,24 +194,3 @@ htmlSplice = return . docContent . renderHtml
 docContent :: X.Document -> [X.Node]
 docContent (X.HtmlDocument _ _ ns) = ns
 docContent (X.XmlDocument  _ _ ns) = ns
-
-------------------------------------------------------------------------
-
-getRepoNames :: MonadIO m => FilePath -> m [Text]
-getRepoNames repoDir = do
-    xs <- getDirectoryContents' repoDir
-    return $ map T.pack
-           $ map takeBaseName
-           $ filter isRepo xs
-
-isRepo :: FilePath -> Bool
-isRepo = (== ".git") . takeExtension
-
-getDirectoryContents' :: MonadIO m => FilePath -> m [FilePath]
-getDirectoryContents' dir = do
-    contents <- liftIO $ getDirectoryContents dir
-    return $ filter (not . hidden) contents
-
-hidden :: FilePath -> Bool
-hidden ('.':_) = True
-hidden _       = False
