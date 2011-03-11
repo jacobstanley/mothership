@@ -191,8 +191,7 @@ repoSplice = lift findAll >>= htmlSplice . repos
           $ text (repoName x)
 
 htmlSplice :: Monad m => Html -> Splice m
-htmlSplice = return . docContent . renderHtml
-
-docContent :: X.Document -> [X.Node]
-docContent (X.HtmlDocument _ _ ns) = ns
-docContent (X.XmlDocument  _ _ ns) = ns
+htmlSplice = return . content . renderHtml
+  where
+    content (X.HtmlDocument _ _ ns) = ns
+    content (X.XmlDocument  _ _ ns) = ns
