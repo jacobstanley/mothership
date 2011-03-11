@@ -106,8 +106,8 @@ currentUser = toUser <$> currentAuthUser
 lookupBS :: ByteString -> Params -> ByteString
 lookupBS k ps = case M.lookup k ps of
     Just (x:_) -> x
-    _          -> error $ "createUser: cannot create without "
-                       ++ "parameter '" ++ B.unpack k ++ "'"
+    _          -> error $ "lookupBS: missing required parameter '"
+                          ++ B.unpack k ++ "'"
 
 lookupT :: ByteString -> Params -> Text
 lookupT k = decodeUtf8 . lookupBS k
