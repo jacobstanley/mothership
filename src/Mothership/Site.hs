@@ -6,7 +6,7 @@ module Mothership.Site
     ) where
 
 import           Control.Applicative ((<|>), (<$>))
-import           Control.Monad (guard, liftM)
+import           Control.Monad (guard)
 import           Control.Monad.Trans (lift)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
@@ -25,7 +25,6 @@ import           Text.Blaze.Html5 hiding (map, head, time)
 import           Text.Blaze.Html5.Attributes (href, class_)
 import           Text.Blaze.Renderer.XmlHtml (renderHtml)
 import           Text.Templating.Heist
-import           Text.Templating.Heist.Splices.Ignore
 import qualified Text.XmlHtml as X
 import           Prelude hiding (span, lookup)
 
@@ -135,23 +134,26 @@ withSplices = heistLocal (bindSplices splices)
 
 splices :: [(Text, Splice Application)]
 splices =
-    [ ("ifLoggedIn",   ifLoggedInSplice)
-    , ("ifGuest",      ifGuestSplice)
-    , ("userFullName", userFullNameSplice) ]
+    [ ("ifLoggedIn",   ifLoggedIn)
+    , ("ifGuest",      ifGuest)
+    , ("requireAuth",  requireAuth)
+    , ("userFullName", userFullNameSplice)
+    ]
 
-ifLoggedInSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
-ifLoggedInSplice = ifLoggedIn childNodes ignoreImpl
+ifLoggedIn :: Splice Application
+ifLoggedIn = do
+    node <- getParamNode
+    lift $ requireUser (return []) (return $ X.childNodes node)
 
-ifGuestSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
-ifGuestSplice = ifLoggedIn ignoreImpl childNodes
+ifGuest :: Splice Application
+ifGuest = do
+    node <- getParamNode
+    lift $ requireUser (return $ X.childNodes node) (return [])
 
-ifLoggedIn :: (MonadAuth m, MonadMongoDB m) => Splice m -> Splice m -> Splice m
-ifLoggedIn yes no = lift authenticatedUserId >>= maybe no (const yes)
+requireAuth :: Splice Application
+requireAuth = lift $ requireUser pass (return [])
 
-childNodes :: Monad m => Splice m
-childNodes = liftM X.childNodes getParamNode
-
-userFullNameSplice :: (MonadAuth m, MonadMongoDB m) => Splice m
+userFullNameSplice :: Splice Application
 userFullNameSplice = lift currentUser >>= return . maybe [] name
   where
     name = return . X.TextNode . userFullName

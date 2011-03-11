@@ -11,13 +11,13 @@
     <div id='nav'>
       <ul>
         <ifLoggedIn>
-        <li><span class='user'><userFullName/></span></li>
-        <li><a href='/'>Dashboard</a></li>
-        <li><a href='/logout'>Logout</a></li>
+          <li><span class='user'><userFullName/></span></li>
+          <li><a href='/'>Dashboard</a></li>
+          <li><a href='/logout'>Logout</a></li>
         </ifLoggedIn>
         <ifGuest>
-        <li><a href='/signup'>Signup</a></li>
-        <li><a href='/login'>Login</a></li>
+          <li><a href='/signup'>Signup</a></li>
+          <li><a href='/login'>Login</a></li>
         </ifGuest>
       </ul>
     </div>

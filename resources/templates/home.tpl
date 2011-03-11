@@ -6,6 +6,8 @@
   <repositories/>
 </div>
 
-<a class='button' href='/repositories/new'>New repository</a>
+<ifLoggedIn>
+  <a class='button' href='/repositories/new'>New repository</a>
+</ifLoggedIn>
 
 </apply>

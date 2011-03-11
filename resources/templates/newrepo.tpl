@@ -1,3 +1,4 @@
+<requireAuth/>
 <apply template='default'>
 
 <h2>Create a new repository</h2>
