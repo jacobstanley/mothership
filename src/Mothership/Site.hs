@@ -119,11 +119,11 @@ newRepo = render "newrepo"
 
 createRepo :: Application ()
 createRepo = do
-    ps <- getParams
-    insert (repo ps)
+    repo <- mkRepo <$> getParams
+    insert repo
     redirect "/"
   where
-    repo ps = Repository
+    mkRepo ps = Repository
         { repoName = lookupT "name" ps
         , repoDescription = lookupT "description" ps }
 
