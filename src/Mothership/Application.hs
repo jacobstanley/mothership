@@ -88,17 +88,17 @@ class HasMothershipState s where
     getMothershipState :: s -> MothershipState
 
 class MonadSnap m => MonadMothership m where
-    getRepoDir :: m FilePath
+    getRepositoriesDir :: m FilePath
 
 data MothershipState = MothershipState
-    { _repoDir :: FilePath
+    { _repositoriesDir :: FilePath
     }
 
 instance HasMothershipState s => MonadMothership (SnapExtend s) where
-    getRepoDir = fmap _repoDir $ asks getMothershipState
+    getRepositoriesDir = fmap _repositoriesDir $ asks getMothershipState
 
 instance (MonadSnap m, HasMothershipState s) => MonadMothership (ReaderT s m) where
-    getRepoDir = fmap _repoDir $ asks getMothershipState
+    getRepositoriesDir = fmap _repositoriesDir $ asks getMothershipState
 
 instance InitializerState MothershipState where
     extensionId = const "Mothership"

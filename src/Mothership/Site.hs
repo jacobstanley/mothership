@@ -7,11 +7,12 @@ module Mothership.Site
 
 import           Control.Applicative ((<|>), (<$>))
 import           Control.Monad
-import           Control.Monad.Trans (lift)
+import           Control.Monad.Trans (lift, liftIO)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.Map as M
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 import           Snap.Auth
 import           Snap.Auth.Handlers
@@ -20,11 +21,13 @@ import           Snap.Extension.Heist
 import           Snap.Extension.Session.CookieSession
 import           Snap.Types hiding (path, dir)
 import           Snap.Util.FileServe
+import           System.Directory
 import           System.FilePath
 import           Text.Templating.Heist
 import qualified Text.XmlHtml as X
 import           Prelude hiding (span, lookup)
 
+import           Git
 import           Mothership.Application
 import           Mothership.Types
 import           Snap.Util
@@ -118,11 +121,21 @@ createRepo :: Application ()
 createRepo = do
     repo <- mkRepo <$> getParams
     insert repo
+
+    dir <- getDir repo
+    liftIO $ createDirectoryIfMissing True dir
+    liftIO $ gitExec_ dir ["init", "--bare"]
+
     redirect "/"
   where
     mkRepo ps = Repository
         { repoName = lookupT "name" ps
         , repoDescription = lookupT "description" ps }
+
+getDir :: Repository -> Application FilePath
+getDir repo = (</> name ++ ".git") <$> getRepositoriesDir
+  where
+    name = T.unpack $ repoName repo
 
 ------------------------------------------------------------------------
 
@@ -164,7 +177,7 @@ git = do
 
     basicAuth "Mothership" attemptLogin
 
-    dir <- getRepoDir
+    dir <- getRepositoriesDir
     serveRepo (dir </> repo)
   where
     attemptLogin username password = do
