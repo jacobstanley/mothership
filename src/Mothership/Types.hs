@@ -19,7 +19,6 @@ module Mothership.Types
 import           Control.Applicative ((<$>), (<*>))
 import           Data.Maybe (mapMaybe)
 import           Data.Text (Text)
-import qualified Data.Text as T
 import           Prelude hiding (span, lookup)
 import           Snap.Extension.DB.MongoDB hiding (insert)
 import qualified Snap.Extension.DB.MongoDB as DB
@@ -32,10 +31,6 @@ class Bson a where
 
 class Bson a => Entity a where
     collection :: a -> Collection
-
-instance Val Text where
-    val = val . T.unpack
-    cast' = fmap T.pack . cast'
 
 insert :: (MonadMongoDB m, Entity a) => a -> m ()
 insert x = withDB' $ DB.insert_ (collection x) (toDoc x)
