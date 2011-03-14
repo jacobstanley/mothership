@@ -10,11 +10,11 @@ category:       Development
 build-type:     Simple
 cabal-version:  >= 1.2
 
-Flag development
+flag development
   Description: Whether to build the server in development (interpreted) mode
   Default: False
 
-Executable mothership
+executable mothership
   hs-source-dirs: src
   main-is: Main.hs
 
