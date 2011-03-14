@@ -83,6 +83,13 @@ optgroup {
   color: #666;
 }
 
+.error {
+  color: #900;
+  background-color: #FDD;
+  padding: 0.45em;
+  margin: 0 0 0.75em 0;
+}
+
 button {
   margin-top: 0.25em;
 }

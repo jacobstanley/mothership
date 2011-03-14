@@ -65,10 +65,13 @@ home = do
 ------------------------------------------------------------------------
 
 newLogin :: Application ()
-newLogin = render "login"
+newLogin = renderWithSplices "login" [("ifLoginFailure", ignore)]
+
+loginFailed :: Application ()
+loginFailed = renderWithSplices "login" [("ifLoginFailure", include)]
 
 login :: Application ()
-login = loginHandler "password" Nothing newLogin (redirect "/")
+login = loginHandler "password" Nothing loginFailed (redirect "/")
 
 logout :: Application ()
 logout = logoutHandler (redirect "/")
@@ -151,22 +154,27 @@ splices =
     ]
 
 ifLoggedIn :: Splice Application
-ifLoggedIn = do
-    node <- getParamNode
-    lift $ requireUser (return []) (return $ X.childNodes node)
+ifLoggedIn = requireUser' ignore include
 
 ifGuest :: Splice Application
-ifGuest = do
-    node <- getParamNode
-    lift $ requireUser (return $ X.childNodes node) (return [])
+ifGuest = requireUser' include ignore
 
 requireAuth :: Splice Application
-requireAuth = lift $ requireUser pass (return [])
+requireAuth = requireUser' (lift pass) include
+
+requireUser' :: Splice Application -> Splice Application -> Splice Application
+requireUser' bad good = join $ lift $ requireUser (return bad) (return good)
 
 userFullNameSplice :: Splice Application
 userFullNameSplice = lift currentUser >>= return . maybe [] name
   where
     name = return . X.TextNode . userFullName
+
+include :: Monad m => Splice m
+include = getParamNode >>= return . X.childNodes
+
+ignore :: Monad m => Splice m
+ignore = return []
 
 ------------------------------------------------------------------------
 

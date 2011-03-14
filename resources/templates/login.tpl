@@ -2,6 +2,10 @@
 
 <h2>Log in to Mothership</h2>
 
+<ifLoginFailure>
+<p class="error">Invalid username or password.</p>
+</ifLoginFailure>
+
 <form method='post'>
   <dl>
     <dt><label for='username'>Username</label></dt>
