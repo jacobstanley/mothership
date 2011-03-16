@@ -28,6 +28,7 @@ import qualified Text.XmlHtml as X
 import           Prelude hiding (span, lookup)
 
 import           Git
+import           Heist.Future
 import           Mothership.Application
 import           Mothership.Types
 import           Snap.Util
@@ -202,35 +203,9 @@ isRepo = (== ".git") . takeExtension
 repoSplice :: Splice Application
 repoSplice = do
     repos <- lift findAll
-    concatMapView fromRepo repos
+    mapSplices (viewWith . fromRepo) repos
   where
     fromRepo :: Repository -> [(Text, Splice Application)]
     fromRepo r = [ ("name", text $ repoName r)
                  , ("description", text $ repoDescription r) ]
     text = return . return . X.TextNode
-
-------------------------------------------------------------------------
--- Heist 0.5.x
-
-runChildren :: Monad m => Splice m
-runChildren = runNodeList . X.childNodes =<< getParamNode
-
-viewWith :: Monad m => [(Text, Splice m)] -> Splice m
-viewWith ss = localTS (bindSplices ss) runChildren
-
-concatMapView :: Monad m => (a -> [(Text, Splice m)]) -> [a] -> Splice m
-concatMapView f = concatMapM (viewWith . f)
-
-concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
-concatMapM f = liftM concat . mapM f
-
-localTS :: Monad m
-        => (TemplateState m -> TemplateState m)
-        -> TemplateMonad m a
-        -> TemplateMonad m a
-localTS f k = do
-    ts <- getTS
-    putTS $ f ts
-    res <- k
-    restoreTS ts
-    return res
